@@ -241,6 +241,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     initialStateEl.classList.remove("hidden");
     rescanBtn.classList.add("hidden");
     resetViewBtn.classList.add("hidden");
+    document.getElementById("more-details-header-btn")?.classList.add("hidden");
+  });
+
+  // "More Details" Expanded Dashboard Redirect Triggers
+  const moreDetailsHeaderBtn = document.getElementById("more-details-header-btn");
+  const moreDetailsHeroBtn = document.getElementById("more-details-hero-btn");
+  const moreDetailsRefBtn = document.getElementById("more-details-ref-btn");
+
+  [moreDetailsHeaderBtn, moreDetailsHeroBtn, moreDetailsRefBtn].forEach((btn) => {
+    if (btn) {
+      btn.addEventListener("click", openExpandedWebDashboard);
+    }
   });
 
   // Styles ON/OFF Toggle
@@ -429,6 +441,7 @@ async function triggerScan() {
       // Reveal header controls
       rescanBtn.classList.remove("hidden");
       resetViewBtn.classList.remove("hidden");
+      document.getElementById("more-details-header-btn")?.classList.remove("hidden");
     }
   );
 }
@@ -613,7 +626,7 @@ function renderDetailsItems() {
   }
 }
 
-// ── TAB 2: REFERENCE ENCYCLOPEDIA ───────────────────────────────────
+// ── TAB 2: REFERENCE ENCYCLOPEDIA (MINIMAL ACCORDION) ───────────────
 function renderReferenceRulebook() {
   const container = document.getElementById("reference-rule-list");
   if (!container) return;
@@ -627,45 +640,68 @@ function renderReferenceRulebook() {
     });
   }
 
-  for (const rule of list) {
+  list.forEach((rule, idx) => {
     const card = document.createElement("div");
-    card.className = "ref-rule-card";
+    // Expand the first item by default if not searching, collapse the rest
+    card.className = `ref-rule-card ${idx === 0 && !referenceSearchKeyword ? "is-open" : ""}`;
     card.innerHTML = `
-      <div class="ref-rule-header">
-        <span class="ref-rule-title">${escapeHtml(rule.name)}</span>
-        <span class="ref-wcag-badge">${escapeHtml(rule.wcag)}</span>
-      </div>
-      <div class="ref-section">
-        <div class="ref-sec-label">What it means</div>
-        <div class="ref-sec-text">${escapeHtml(rule.problem)}</div>
-      </div>
-      <div class="ref-section">
-        <div class="ref-sec-label">Why it matters</div>
-        <div class="ref-sec-text">${escapeHtml(rule.why)}</div>
-      </div>
-      <div class="ref-section">
-        <div class="ref-sec-label">How to fix</div>
-        <div class="ref-sec-text">${escapeHtml(rule.fix)}</div>
-      </div>
-      <div class="ref-examples-grid">
-        <div class="ref-code-box ref-code-bad">
-          <span class="ref-code-title">
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:3px;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-            Incorrect Implementation
-          </span>
-          <code>${escapeHtml(rule.badHtml)}</code>
+      <div class="ref-rule-header" role="button" tabindex="0" title="Click to view full rule explanation and code example">
+        <div class="ref-header-left">
+          <span class="ref-rule-title">${escapeHtml(rule.name)}</span>
         </div>
-        <div class="ref-code-box ref-code-good">
-          <span class="ref-code-title">
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:3px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-            Correct Implementation
-          </span>
-          <code>${escapeHtml(rule.goodHtml)}</code>
+        <div class="ref-header-right">
+          <span class="ref-wcag-badge">${escapeHtml(rule.wcag)}</span>
+          <svg class="ref-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </div>
+      </div>
+      <div class="ref-rule-body">
+        <div class="ref-section">
+          <div class="ref-sec-label">What it means</div>
+          <div class="ref-sec-text">${escapeHtml(rule.problem)}</div>
+        </div>
+        <div class="ref-section">
+          <div class="ref-sec-label">Why it matters</div>
+          <div class="ref-sec-text">${escapeHtml(rule.why)}</div>
+        </div>
+        <div class="ref-section">
+          <div class="ref-sec-label">How to fix</div>
+          <div class="ref-sec-text">${escapeHtml(rule.fix)}</div>
+        </div>
+        <div class="ref-examples-stack">
+          <div class="ref-code-box ref-code-bad">
+            <span class="ref-code-title">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+              Incorrect Implementation
+            </span>
+            <code>${escapeHtml(rule.badHtml)}</code>
+          </div>
+          <div class="ref-code-box ref-code-good">
+            <span class="ref-code-title">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              Correct Implementation
+            </span>
+            <code>${escapeHtml(rule.goodHtml)}</code>
+          </div>
         </div>
       </div>
     `;
+
+    // Accordion toggle click & keyboard Enter/Space
+    const headerEl = card.querySelector(".ref-rule-header");
+    headerEl.addEventListener("click", () => {
+      card.classList.toggle("is-open");
+    });
+    headerEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        card.classList.toggle("is-open");
+      }
+    });
+
     container.appendChild(card);
-  }
+  });
 }
 
 // ── TAB 3: ORDER (KEYBOARD NAVIGATION) ──────────────────────────────
@@ -940,3 +976,53 @@ function escapeHtml(str) {
   div.textContent = str;
   return div.innerHTML;
 }
+
+// ── EXPANDED WEB DASHBOARD REDIRECT ─────────────────────────────────
+async function openExpandedWebDashboard() {
+  if (!currentReport) {
+    alert("Please wait for or run a scan first!");
+    return;
+  }
+
+  // 1. Sync live DOM audit report to FastAPI backend store
+  try {
+    fetch("http://localhost:8000/api/scan/audit-sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(currentReport),
+    }).catch(() => {});
+  } catch (_) {}
+
+  // 2. Open Vite React web dashboard in expanded view
+  const targetUrl = "http://localhost:5173/?source=extension";
+  chrome.tabs.create({ url: targetUrl }, (newTab) => {
+    if (!newTab || !newTab.id) return;
+
+    const pushReportToTab = () => {
+      chrome.scripting.executeScript({
+        target: { tabId: newTab.id },
+        func: (reportData) => {
+          try {
+            localStorage.setItem("lantern_extension_report", JSON.stringify(reportData));
+            window.dispatchEvent(new CustomEvent("lantern-report-loaded", { detail: reportData }));
+          } catch (e) {
+            console.error("Lantern: could not store report in localStorage", e);
+          }
+        },
+        args: [currentReport],
+      }).catch(() => {});
+    };
+
+    const updateListener = (tabId, changeInfo) => {
+      if (tabId === newTab.id && changeInfo.status === "complete") {
+        chrome.tabs.onUpdated.removeListener(updateListener);
+        pushReportToTab();
+      }
+    };
+    chrome.tabs.onUpdated.addListener(updateListener);
+
+    // Also inject with timeout fallback
+    setTimeout(pushReportToTab, 800);
+  });
+}
+

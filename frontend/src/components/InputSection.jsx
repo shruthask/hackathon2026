@@ -204,7 +204,7 @@ export default function InputSection({
                     setInputCode(e.target.value);
                     setSelectedSampleId(null);
                   }}
-                  placeholder="<!DOCTYPE html><html><head><title>My Accessible Page</title></head><body>...</body></html>"
+                  placeholder="Paste HTML here..."
                   className="w-full font-mono text-xs p-4 rounded-xl bg-slate-900 text-slate-100 border border-slate-700 focus:outline-hidden focus:ring-2 focus:ring-amber-500 focus:border-amber-500 placeholder:text-slate-500 leading-relaxed"
                 />
               </div>

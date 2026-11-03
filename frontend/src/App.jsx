@@ -27,9 +27,9 @@ export default function App() {
   const inputSectionRef = useRef(null);
 
   // Input states
-  const [inputCode, setInputCode] = useState(SAMPLES[0]?.html || '');
+  const [inputCode, setInputCode] = useState('');
   const [inputUrl, setInputUrl] = useState('https://example.com');
-  const [selectedSampleId, setSelectedSampleId] = useState('broken-bakery');
+  const [selectedSampleId, setSelectedSampleId] = useState(null);
 
   // Verify backend health on mount and periodically
   const verifyHealth = async () => {
@@ -40,25 +40,66 @@ export default function App() {
   useEffect(() => {
     verifyHealth();
     const timer = setInterval(verifyHealth, 15000);
-    return () => clearInterval(timer);
-  }, []);
 
-  // Run initial scan of default sample so results dashboard is populated
-  useEffect(() => {
-    const initialRun = async () => {
-      if (SAMPLES[0]?.html) {
+    // Check for extension redirect or stored live audit
+    const checkExtensionSync = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const isFromExtension = params.get('source') === 'extension';
+
+      // 1. Try reading directly from localStorage
+      const storedReport = localStorage.getItem('lantern_extension_report');
+      if (storedReport) {
         try {
-          setIsLoading(true);
-          const res = await scanHtml(SAMPLES[0].html);
-          setReport(res);
+          const parsed = JSON.parse(storedReport);
+          setReport(parsed);
+          setActiveView('console');
+          if (isFromExtension) {
+            setTimeout(() => {
+              document.getElementById('results-dashboard')?.scrollIntoView({ behavior: 'smooth' });
+            }, 250);
+          }
+          return;
+        } catch (e) {
+          console.warn('Failed to parse lantern_extension_report from localStorage', e);
+        }
+      }
+
+      // 2. Fallback: fetch latest synced report from backend
+      if (isFromExtension) {
+        try {
+          const latest = await fetchLatestAudit();
+          if (latest) {
+            setReport(latest);
+            setActiveView('console');
+            setTimeout(() => {
+              document.getElementById('results-dashboard')?.scrollIntoView({ behavior: 'smooth' });
+            }, 250);
+          }
         } catch (err) {
-          console.warn('Initial background scan skipped (backend might still be starting):', err);
-        } finally {
-          setIsLoading(false);
+          console.error('Could not fetch latest audit from backend:', err);
         }
       }
     };
-    initialRun();
+
+    checkExtensionSync();
+
+    // Listen for real-time live audit injection event from extension
+    const handleReportEvent = (e) => {
+      if (e.detail) {
+        setReport(e.detail);
+        setActiveView('console');
+        setTimeout(() => {
+          document.getElementById('results-dashboard')?.scrollIntoView({ behavior: 'smooth' });
+        }, 200);
+      }
+    };
+
+    window.addEventListener('lantern-report-loaded', handleReportEvent);
+
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('lantern-report-loaded', handleReportEvent);
+    };
   }, []);
 
   // Handlers for scanning
@@ -187,7 +228,7 @@ export default function App() {
             </div>
 
             {/* Results Dashboard */}
-            <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-12">
+            <section id="results-dashboard" className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-12">
               {report ? (
                 <ResultsDashboard
                   report={report}

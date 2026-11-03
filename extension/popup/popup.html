@@ -24,6 +24,11 @@
         <span id="styles-toggle-label" class="styles-toggle-text">Styles ON</span>
       </div>
 
+      <button id="more-details-header-btn" class="header-action-btn hidden" title="Open expanded audit insights on web dashboard">
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        <span>More Details</span>
+      </button>
+
       <button id="reset-view-btn" class="icon-btn hidden" title="Start screen">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       </button>
@@ -109,6 +114,18 @@
         </div>
       </div>
     </section>
+
+    <!-- Expanded Insights Web Banner -->
+    <div class="web-insights-banner">
+      <div class="insights-banner-left">
+        <span class="insights-tag">WEB DASHBOARD</span>
+        <span class="insights-title">Want deeper insights & charts?</span>
+      </div>
+      <button id="more-details-hero-btn" class="insights-cta-btn" title="Open full audit on web dashboard">
+        <span>More Details</span>
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
 
     <!-- Severity Counts Row -->
     <section class="severity-bar">
@@ -255,6 +272,12 @@
 
     <!-- ══════════════ TAB 2: REFERENCE ══════════════ -->
     <section id="tab-content-reference" class="tab-pane hidden">
+      <div class="ref-insights-bar">
+        <span class="ref-sub-hint">WCAG 2.1 Rule Reference & Fixes</span>
+        <button id="more-details-ref-btn" class="ref-insights-btn" title="Open expanded audit on website">
+          <span>More Details</span> &rarr;
+        </button>
+      </div>
       <div class="reference-header">
         <input type="text" id="reference-search-input" placeholder="Search accessibility rules (e.g. alt, contrast, heading)…" />
       </div>

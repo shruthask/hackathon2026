@@ -11,7 +11,7 @@ export default function Footer() {
           <div className="md:col-span-2">
             <div className="flex items-center gap-3 mb-3">
               <img 
-                src="/lantern-logo.png" 
+                src="./lantern-logo.png" 
                 alt="Lantern Logo" 
                 className="h-8 w-auto object-contain"
               />

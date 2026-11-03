@@ -24,7 +24,7 @@ export default function Navbar({
             onClick={() => setActiveView('console')}
           >
             <img 
-              src="/lantern-logo.png" 
+              src="./lantern-logo.png" 
               alt="Lantern" 
               className="h-10 sm:h-11 w-auto object-contain transition-transform group-hover:scale-105"
             />
