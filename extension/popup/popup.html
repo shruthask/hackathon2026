@@ -7,36 +7,78 @@
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
-  <!-- Header -->
+  <!-- Global App Header -->
   <header class="app-header">
     <div class="brand">
-      <span class="brand-icon">🔦</span>
-      <div>
-        <h1 class="brand-title">Lantern</h1>
-        <p class="brand-sub">WCAG 2.1 Auditor</p>
-      </div>
+      <img src="../icons/logo.png" alt="Lantern" class="header-logo" />
     </div>
     <div class="header-actions">
-      <span id="site-badge" class="site-badge hidden">example.com</span>
-      <button id="rescan-btn" class="icon-btn" title="Re-scan current page">🔄</button>
+      <span id="site-badge" class="site-badge" title="Active Tab Host">detecting…</span>
+      <button id="reset-view-btn" class="icon-btn hidden" title="Start screen & privacy settings">🏠</button>
+      <button id="rescan-btn" class="icon-btn hidden" title="Re-scan current page">🔄</button>
     </div>
   </header>
 
-  <!-- Initial / Empty State -->
-  <div id="initial-state" class="state-card">
-    <div class="hero-illustration">🔍</div>
-    <h2>Audit Any Webpage</h2>
-    <p>Runs a comprehensive in-browser WCAG check on live DOM elements, computed contrast, forms, headings, and images.</p>
-    <button id="start-scan-btn" class="primary-btn">
-      <span>Scan Active Tab</span>
+  <!-- Initial / Start Scan State with Privacy Consent -->
+  <div id="initial-state" class="start-screen">
+    <div class="emblem-wrapper">
+      <img src="../icons/emblem.png" alt="Lantern Emblem" class="welcome-emblem" />
+      <div class="emblem-glow"></div>
+    </div>
+
+    <h2 class="welcome-title">Website Accessibility Audit</h2>
+    <p class="welcome-sub">
+      Ready to analyze <strong id="welcome-site-name" class="highlight-domain">current page</strong> for WCAG 2.1 compliance barriers.
+    </p>
+
+    <!-- Capabilities Highlights -->
+    <div class="features-grid">
+      <div class="feature-item">
+        <span class="feat-icon">⚡</span>
+        <span class="feat-text">Live Computed Styles</span>
+      </div>
+      <div class="feature-item">
+        <span class="feat-icon">🎯</span>
+        <span class="feat-text">In-Page Inspector</span>
+      </div>
+      <div class="feature-item">
+        <span class="feat-icon">🌐</span>
+        <span class="feat-text">Shadow DOM Support</span>
+      </div>
+    </div>
+
+    <!-- Privacy & Consent Agreement Card -->
+    <div class="privacy-card">
+      <div class="privacy-header">
+        <span class="shield-icon">🛡️</span>
+        <span class="privacy-title">Privacy & Local Processing Guarantee</span>
+      </div>
+      <p class="privacy-desc">
+        Lantern audits page structure <strong>100% locally in your browser</strong>. We do not track, collect, or transmit your private credentials, form inputs, or browsing history.
+      </p>
+      <label class="privacy-checkbox-label" for="privacy-consent-checkbox">
+        <input type="checkbox" id="privacy-consent-checkbox" checked />
+        <span class="custom-check-text">
+          I understand the privacy conditions & agree to run local accessibility analysis on this page.
+        </span>
+      </label>
+    </div>
+
+    <!-- Start Scan CTA -->
+    <button id="start-scan-btn" class="primary-scan-btn">
+      <span class="btn-icon">🚀</span>
+      <span class="btn-text">Start Accessibility Scan</span>
     </button>
   </div>
 
-  <!-- Loading State -->
-  <div id="loading-state" class="state-card hidden">
-    <div class="spinner"></div>
-    <p class="loading-title">Analyzing page structure & contrast…</p>
-    <p class="loading-sub">Inspecting live DOM nodes and computed styles</p>
+  <!-- Loading Animation State -->
+  <div id="loading-state" class="loading-screen hidden">
+    <div class="pulse-emblem-container">
+      <img src="../icons/emblem.png" alt="Auditing" class="loading-emblem" />
+      <div class="loading-ring"></div>
+    </div>
+    <h3 class="loading-title">Auditing Webpage</h3>
+    <p id="loading-step-msg" class="loading-step">Traversing live DOM nodes and shadow roots…</p>
   </div>
 
   <!-- Results Dashboard -->
@@ -52,23 +94,26 @@
       </div>
       <div class="score-details">
         <h3 id="score-title" class="score-title">Good Accessibility</h3>
-        <p id="stats-summary" class="stats-text">Found 6 issues across 142 elements</p>
-        <span id="audit-duration" class="meta-tag">⚡ 28ms</span>
+        <p id="stats-summary" class="stats-text">Found 6 issues on this page</p>
+        <div class="meta-row">
+          <span id="audit-duration" class="meta-tag">⚡ 28ms</span>
+          <span class="meta-tag engine-tag">Live DOM Engine</span>
+        </div>
       </div>
     </section>
 
     <!-- Severity Filter Pills -->
     <section class="severity-bar">
-      <button class="sev-pill critical active" data-filter="critical">
+      <button class="sev-pill critical active" data-filter="critical" title="Toggle Critical Issues">
         <span id="count-critical" class="pill-count">0</span> Critical
       </button>
-      <button class="sev-pill serious active" data-filter="serious">
+      <button class="sev-pill serious active" data-filter="serious" title="Toggle Serious Issues">
         <span id="count-serious" class="pill-count">0</span> Serious
       </button>
-      <button class="sev-pill moderate active" data-filter="moderate">
+      <button class="sev-pill moderate active" data-filter="moderate" title="Toggle Moderate Issues">
         <span id="count-moderate" class="pill-count">0</span> Moderate
       </button>
-      <button class="sev-pill minor active" data-filter="minor">
+      <button class="sev-pill minor active" data-filter="minor" title="Toggle Minor Issues">
         <span id="count-minor" class="pill-count">0</span> Minor
       </button>
     </section>
@@ -86,13 +131,13 @@
     <!-- Search & Toolbar -->
     <div class="filter-toolbar">
       <div class="search-box">
-        <input type="text" id="search-input" placeholder="Filter issues by name or tag…" />
+        <input type="text" id="search-input" placeholder="Search rules, messages, or tags…" />
       </div>
       <div class="toolbar-actions">
         <button id="toggle-highlights-btn" class="tool-btn active" title="Toggle In-Page Outlines">
           👁️ Outlines
         </button>
-        <button id="export-csv-btn" class="tool-btn" title="Export as CSV">
+        <button id="export-csv-btn" class="tool-btn" title="Export as CSV Report">
           📥 CSV
         </button>
       </div>
@@ -112,7 +157,7 @@
         <summary>⚠️ WCAG Disclaimer & Manual Testing Guide</summary>
         <div class="guidance-content">
           <p class="disclaimer-note">
-            Automated tools catch only ~30–40% of WCAG barriers. Always complete manual checks:
+            Automated tools catch only a subset of accessibility barriers. Essential manual checks:
           </p>
           <ul class="manual-checklist">
             <li><strong>⌨️ Keyboard Tab Test:</strong> Press <kbd>Tab</kbd> to ensure all interactive elements receive visible focus and are operable without a mouse.</li>

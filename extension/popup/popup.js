@@ -1,12 +1,13 @@
 /**
  * Lantern – Popup Controller
  *
- * Manages scan triggering, interactive filters, search, score dial,
- * in-page inspector scrolling, and CSV export.
+ * Manages Start Scan Screen with Privacy Consent, Interactive Filters,
+ * In-Page Inspector Navigation, and CSV Report Export.
  */
 
 let currentReport = null;
 let activeTabId = null;
+let currentHostname = "current page";
 let currentCategory = "all";
 let activeSeverities = new Set(["critical", "serious", "moderate", "minor"]);
 let searchKeyword = "";
@@ -15,11 +16,16 @@ let areHighlightsVisible = true;
 // DOM Elements
 const initialStateEl = document.getElementById("initial-state");
 const loadingStateEl = document.getElementById("loading-state");
+const loadingStepMsgEl = document.getElementById("loading-step-msg");
 const resultsDashboardEl = document.getElementById("results-dashboard");
-const siteBadgeEl = document.getElementById("site-badge");
 
+const siteBadgeEl = document.getElementById("site-badge");
+const welcomeSiteNameEl = document.getElementById("welcome-site-name");
+const privacyCheckbox = document.getElementById("privacy-consent-checkbox");
 const startScanBtn = document.getElementById("start-scan-btn");
 const rescanBtn = document.getElementById("rescan-btn");
+const resetViewBtn = document.getElementById("reset-view-btn");
+
 const toggleHighlightsBtn = document.getElementById("toggle-highlights-btn");
 const exportCsvBtn = document.getElementById("export-csv-btn");
 const searchInput = document.getElementById("search-input");
@@ -45,19 +51,37 @@ document.addEventListener("DOMContentLoaded", async () => {
     activeTabId = tab.id;
     try {
       const urlObj = new URL(tab.url || "");
-      siteBadgeEl.textContent = urlObj.hostname || "local page";
-      siteBadgeEl.classList.remove("hidden");
+      currentHostname = urlObj.hostname || "local page";
     } catch (e) {
-      siteBadgeEl.classList.add("hidden");
+      currentHostname = "local page";
     }
   }
 
-  // Bind Listeners
-  startScanBtn.addEventListener("click", triggerScan);
+  siteBadgeEl.textContent = currentHostname;
+  welcomeSiteNameEl.textContent = currentHostname;
+
+  // Privacy agreement controls Start Scan button state
+  privacyCheckbox.addEventListener("change", () => {
+    startScanBtn.disabled = !privacyCheckbox.checked;
+  });
+
+  // Start & Rescan buttons
+  startScanBtn.addEventListener("click", () => {
+    if (privacyCheckbox.checked) {
+      triggerScan();
+    }
+  });
+
   rescanBtn.addEventListener("click", triggerScan);
 
-  // Auto-scan on popup open for instant feedback
-  triggerScan();
+  // Return to Start Screen / Privacy Settings
+  resetViewBtn.addEventListener("click", () => {
+    resultsDashboardEl.classList.add("hidden");
+    loadingStateEl.classList.add("hidden");
+    initialStateEl.classList.remove("hidden");
+    rescanBtn.classList.add("hidden");
+    resetViewBtn.classList.add("hidden");
+  });
 
   // Severity Pills click
   document.querySelectorAll(".sev-pill").forEach((pill) => {
@@ -111,7 +135,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   exportCsvBtn.addEventListener("click", exportResultsToCSV);
 });
 
-// ── Trigger Scan ────────────────────────────────────────────────────
+// ── Trigger Scan with Step Feedback ─────────────────────────────────
 async function triggerScan() {
   if (!activeTabId) return;
 
@@ -119,20 +143,40 @@ async function triggerScan() {
   resultsDashboardEl.classList.add("hidden");
   loadingStateEl.classList.remove("hidden");
 
+  // Animate loading step messages
+  let step = 0;
+  const steps = [
+    "Traversing live DOM nodes and shadow roots…",
+    "Computing relative luminance & color contrast…",
+    "Checking form labels and interactive controls…",
+    "Verifying heading hierarchy and image alt tags…",
+  ];
+  const stepInterval = setInterval(() => {
+    step = (step + 1) % steps.length;
+    if (loadingStepMsgEl) {
+      loadingStepMsgEl.textContent = steps[step];
+    }
+  }, 450);
+
   chrome.runtime.sendMessage(
     { action: "scan-page", tabId: activeTabId },
     (response) => {
+      clearInterval(stepInterval);
       loadingStateEl.classList.add("hidden");
 
       if (!response || !response.success) {
         initialStateEl.classList.remove("hidden");
         const msg = response?.error || "Could not complete scan.";
-        initialStateEl.querySelector("p").textContent = `⚠️ Error: ${msg}`;
+        alert(`Audit Error: ${msg}`);
         return;
       }
 
       currentReport = response.data;
       renderDashboard(currentReport);
+
+      // Reveal header navigation buttons
+      rescanBtn.classList.remove("hidden");
+      resetViewBtn.classList.remove("hidden");
     }
   );
 }
@@ -141,7 +185,7 @@ async function triggerScan() {
 function renderDashboard(report) {
   resultsDashboardEl.classList.remove("hidden");
 
-  // 1. Scorecard
+  // 1. Scorecard Hero
   const score = report.score ?? 100;
   const grade = report.grade ?? "A";
   scoreValEl.textContent = score;
@@ -153,8 +197,8 @@ function renderDashboard(report) {
   else if (score >= 70) scoreTitleEl.textContent = "Needs Attention";
   else scoreTitleEl.textContent = "Significant Accessibility Barriers";
 
-  statsSummaryEl.textContent = `Found ${report.total_issues} issue(s) on ${report.hostname || "this page"}`;
-  auditDurationEl.textContent = `⚡ ${report.duration_ms || 18}ms`;
+  statsSummaryEl.textContent = `Found ${report.total_issues} issue(s) on ${report.hostname || currentHostname}`;
+  auditDurationEl.textContent = `⚡ ${report.duration_ms || 24}ms`;
 
   // 2. Counters
   countCriticalEl.textContent = report.summary?.critical || 0;
@@ -224,7 +268,7 @@ function renderFilteredIssues() {
       </details>
     `;
 
-    // Bind Inspect Button
+    // Bind Inspect Button to scroll directly to the DOM element
     const inspectBtn = li.querySelector(".inspect-btn");
     if (inspectBtn) {
       inspectBtn.addEventListener("click", () => {
@@ -267,7 +311,7 @@ function exportResultsToCSV() {
 
   const a = document.createElement("a");
   a.href = url;
-  const host = currentReport.hostname || "page";
+  const host = currentReport.hostname || currentHostname || "page";
   a.download = `lantern-audit-${host}-${Date.now()}.csv`;
   document.body.appendChild(a);
   a.click();
