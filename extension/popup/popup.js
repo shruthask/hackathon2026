@@ -20,11 +20,14 @@ let areHighlightsVisible = true;
 let areOrderPinsVisible = true;
 let currentOrderIndex = 0;
 
-// ── WCAG Reference Rulebook Encyclopedia ────────────────────────────
+// ── WCAG Reference Rulebook Encyclopedia (Complete 18 Criteria) ───────
 const RULE_ENCYCLOPEDIA = [
   {
     id: "img-alt-missing",
     name: "Missing Alternative Text on Image",
+    category: "images",
+    severity: "critical",
+    wcagCode: "WCAG 1.1.1 (A)",
     wcag: "1.1.1 Non-text Content (Level A)",
     problem: "The <img> element has no `alt` attribute.",
     why: "Screen reader users cannot perceive images without alternative text. The screen reader may read out the raw file URL instead, which is confusing and unhelpful.",
@@ -36,6 +39,9 @@ const RULE_ENCYCLOPEDIA = [
   {
     id: "img-alt-empty-link",
     name: "Empty Image Alt in Standalone Link",
+    category: "images",
+    severity: "critical",
+    wcagCode: "WCAG 1.1.1 / 2.4.4 (A)",
     wcag: "1.1.1 Non-text Content / 2.4.4 Link Purpose (Level A)",
     problem: 'An image inside a link has alt="" but no accompanying link text.',
     why: "Because alt is empty, screen readers treat the image as decorative. But since there is no other text inside the <a>, the entire link has no accessible name.",
@@ -47,6 +53,9 @@ const RULE_ENCYCLOPEDIA = [
   {
     id: "img-alt-uninformative",
     name: "Uninformative or Placeholder Alt Text",
+    category: "images",
+    severity: "moderate",
+    wcagCode: "WCAG 1.1.1 (A)",
     wcag: "1.1.1 Non-text Content (Level A)",
     problem: 'Image alt text contains generic words like "image", "photo", "icon", or just a file name.',
     why: "Screen readers already announce that an element is a graphic or image. Repeating words like 'photo of' or 'banner.png' adds noise without conveying information.",
@@ -56,8 +65,25 @@ const RULE_ENCYCLOPEDIA = [
     goodHtml: '<img src="chart.png" alt="Bar chart showing 35% increase in user retention in Q3">',
   },
   {
+    id: "svg-missing-accessible-name",
+    name: "SVG Graphic Without Accessible Name",
+    category: "images",
+    severity: "moderate",
+    wcagCode: "WCAG 1.1.1 (A)",
+    wcag: "1.1.1 Non-text Content (Level A)",
+    problem: "An inline <svg> element conveys visual meaning but lacks a <title>, aria-label, or aria-labelledby attribute.",
+    why: "Screen readers skip inline SVGs or announce them as unlabelled objects unless an accessible name is explicitly defined.",
+    impact: "Users with visual impairments cannot determine the meaning or function of charts, diagrams, or icon graphics.",
+    fix: 'Add aria-label="Descriptive name", or include a <title> child element inside the <svg>. If purely decorative, mark with aria-hidden="true".',
+    badHtml: '<svg viewBox="0 0 24 24"><path d="..."/></svg>',
+    goodHtml: '<svg viewBox="0 0 24 24" aria-label="Satisfaction rating" role="img">\n  <title>Customer Satisfaction</title>\n  <path d="..."/>\n</svg>',
+  },
+  {
     id: "form-label-missing",
     name: "Missing Accessible Form Label",
+    category: "forms",
+    severity: "critical",
+    wcagCode: "WCAG 1.3.1 / 3.3.2 (A)",
     wcag: "1.3.1 Info and Relationships / 3.3.2 Labels or Instructions (Level A)",
     problem: "A form control (<input>, <select>, <textarea>) is not associated with an accessible label.",
     why: "Assistive technologies cannot announce the purpose of an input field unless it is linked to a visible <label> or has an ARIA label.",
@@ -69,6 +95,9 @@ const RULE_ENCYCLOPEDIA = [
   {
     id: "form-label-placeholder-only",
     name: "Placeholder Used as Sole Label",
+    category: "forms",
+    severity: "serious",
+    wcagCode: "WCAG 3.3.2 (A)",
     wcag: "3.3.2 Labels or Instructions (Level A)",
     problem: "A form input relies exclusively on the placeholder attribute instead of a permanent label.",
     why: "Placeholders disappear as soon as the user starts typing, making it difficult for users to review their inputs. Placeholders also commonly fail color contrast standards.",
@@ -80,6 +109,9 @@ const RULE_ENCYCLOPEDIA = [
   {
     id: "button-missing-accessible-name",
     name: "Button Without Accessible Name",
+    category: "forms",
+    severity: "critical",
+    wcagCode: "WCAG 4.1.2 (A)",
     wcag: "4.1.2 Name, Role, Value (Level A)",
     problem: "A button element contains no readable text, accessible label, or icon alt description.",
     why: "Icon-only buttons (such as search magnifying glasses or hamburger menu bars) have no default text content.",
@@ -91,6 +123,9 @@ const RULE_ENCYCLOPEDIA = [
   {
     id: "link-empty",
     name: "Empty Link Without Text",
+    category: "navigation",
+    severity: "critical",
+    wcagCode: "WCAG 2.4.4 (A)",
     wcag: "2.4.4 Link Purpose (In Context) (Level A)",
     problem: "An anchor <a> has an href attribute but no discernible text or accessible label.",
     why: "Links must convey their purpose so users can decide whether to follow them.",
@@ -102,6 +137,9 @@ const RULE_ENCYCLOPEDIA = [
   {
     id: "link-generic-text",
     name: "Generic or Ambiguous Link Text",
+    category: "navigation",
+    severity: "serious",
+    wcagCode: "WCAG 2.4.4 (A)",
     wcag: "2.4.4 Link Purpose (In Context) (Level A)",
     problem: 'Link uses generic text such as "click here", "read more", "link", or "details".',
     why: "Screen reader users often browse pages by listening to a list of all links out of context.",
@@ -113,6 +151,9 @@ const RULE_ENCYCLOPEDIA = [
   {
     id: "contrast-low",
     name: "Low Text Color Contrast",
+    category: "contrast",
+    severity: "serious",
+    wcagCode: "WCAG 1.4.3 (AA)",
     wcag: "1.4.3 Contrast (Minimum) (Level AA)",
     problem: "The contrast ratio between text foreground and its background is below the required 4.5:1 ratio (or 3:1 for large text).",
     why: "Sufficient visual contrast is vital for text readability across various lighting conditions and visual abilities.",
@@ -122,8 +163,25 @@ const RULE_ENCYCLOPEDIA = [
     goodHtml: '<!-- Contrast: 4.6:1 -->\n<p style="color: #475569; background: #ffffff;">Dark slate text</p>',
   },
   {
+    id: "heading-missing-all",
+    name: "No Headings Found on Webpage",
+    category: "headings",
+    severity: "serious",
+    wcagCode: "WCAG 1.3.1 (A)",
+    wcag: "1.3.1 Info and Relationships (Level A)",
+    problem: "The webpage does not contain any heading tags (<h1> through <h6>).",
+    why: "Headings allow assistive technology users to scan and jump between major document sections without reading every word linearly.",
+    impact: "Users cannot quickly comprehend page organization or navigate to desired sections.",
+    fix: "Structure document content into hierarchical sections using semantic <h1>, <h2>, and <h3> heading tags.",
+    badHtml: '<div class="big-title">Welcome to Our Platform</div>\n<div class="section-title">Features</div>',
+    goodHtml: '<h1>Welcome to Our Platform</h1>\n<h2>Key Features</h2>',
+  },
+  {
     id: "heading-missing-h1",
     name: "Missing Level 1 Heading (H1)",
+    category: "headings",
+    severity: "serious",
+    wcagCode: "WCAG 1.3.1 (A)",
     wcag: "1.3.1 Info and Relationships (Level A)",
     problem: "The webpage does not have an <h1> heading.",
     why: "The <h1> serves as the primary landmark identifying the topic of the entire webpage.",
@@ -133,8 +191,25 @@ const RULE_ENCYCLOPEDIA = [
     goodHtml: '<main>\n  <h1>Online Bakery Store</h1>\n  <h2>Fresh Pastries Today</h2>\n</main>',
   },
   {
+    id: "heading-empty",
+    name: "Empty Heading Tag Without Content",
+    category: "headings",
+    severity: "moderate",
+    wcagCode: "WCAG 1.3.1 (A)",
+    wcag: "1.3.1 Info and Relationships (Level A)",
+    problem: "A heading tag (<h1-h6>) is present in the DOM but contains no text or accessible content.",
+    why: "Screen readers announce headings during outline navigation. Empty headings announce a level with silence.",
+    impact: "Users are left confused, wondering if content failed to load or if the page is broken.",
+    fix: "Provide concise text describing the following section, or remove the empty heading element.",
+    badHtml: '<h2></h2>',
+    goodHtml: '<h2>User Profile Settings</h2>',
+  },
+  {
     id: "heading-order-skip",
-    name: "Skipped Heading Level",
+    name: "Skipped Heading Level Hierarchy",
+    category: "headings",
+    severity: "moderate",
+    wcagCode: "WCAG 1.3.1 (A)",
     wcag: "1.3.1 Info and Relationships (Level A)",
     problem: "A heading level jumped (e.g. from <h1> directly to <h3>, skipping <h2>).",
     why: "Headings form an outline structure. Skipping levels confuses screen reader navigation hierarchies.",
@@ -146,6 +221,9 @@ const RULE_ENCYCLOPEDIA = [
   {
     id: "tabindex-positive",
     name: "Positive Tabindex Value",
+    category: "navigation",
+    severity: "serious",
+    wcagCode: "WCAG 2.4.3 (A)",
     wcag: "2.4.3 Focus Order (Level A)",
     problem: 'An element has a positive tabindex attribute (e.g. tabindex="1" or "2").',
     why: "Positive tabindex values override natural document flow, causing focus to jump unpredictably across the page.",
@@ -157,6 +235,9 @@ const RULE_ENCYCLOPEDIA = [
   {
     id: "doc-missing-lang",
     name: "Missing Document Language Attribute",
+    category: "structure",
+    severity: "serious",
+    wcagCode: "WCAG 3.1.1 (A)",
     wcag: "3.1.1 Language of Page (Level A)",
     problem: "The <html> element does not have a `lang` attribute.",
     why: "Screen readers use the language tag to load the correct speech synthesizer pronunciation rules.",
@@ -166,8 +247,25 @@ const RULE_ENCYCLOPEDIA = [
     goodHtml: '<html lang="en">\n  <head>...',
   },
   {
+    id: "doc-missing-title",
+    name: "Missing Document Page Title",
+    category: "structure",
+    severity: "serious",
+    wcagCode: "WCAG 2.4.2 (A)",
+    wcag: "2.4.2 Page Titled (Level A)",
+    problem: "The <title> tag is missing inside <head> or is empty.",
+    why: "The title is the first piece of information announced when a page loads and appears in browser tabs and search results.",
+    impact: "Users with screen readers, multiple tabs, or cognitive disabilities cannot identify the active page.",
+    fix: "Add a concise, descriptive <title> in <head>, e.g. <title>Dashboard – Lantern</title>.",
+    badHtml: '<head>\n  <!-- Missing <title> -->\n</head>',
+    goodHtml: '<head>\n  <title>Account Settings | MyApp</title>\n</head>',
+  },
+  {
     id: "viewport-zoom-disabled",
     name: "Pinch to Zoom Disabled in Viewport",
+    category: "structure",
+    severity: "serious",
+    wcagCode: "WCAG 1.4.4 (AA)",
     wcag: "1.4.4 Resize Text (Level AA)",
     problem: 'The <meta name="viewport"> tag includes user-scalable=no or maximum-scale=1.',
     why: "Users with visual impairments must be able to zoom into text up to 200% on mobile and touchscreen devices.",
@@ -393,6 +491,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       referenceSearchKeyword = e.target.value.trim().toLowerCase();
       renderReferenceRulebook();
     });
+  }
+
+  // Scope Filter buttons (Detected on this page vs All rules library)
+  const scopeDetectedBtn = document.getElementById("ref-scope-detected-btn");
+  const scopeAllBtn = document.getElementById("ref-scope-all-btn");
+  if (scopeDetectedBtn) {
+    scopeDetectedBtn.addEventListener("click", () => setReferenceScope("detected"));
+  }
+  if (scopeAllBtn) {
+    scopeAllBtn.addEventListener("click", () => setReferenceScope("all"));
   }
 
   // Toggle Overlays on page

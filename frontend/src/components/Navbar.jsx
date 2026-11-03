@@ -11,7 +11,6 @@ export default function Navbar({
     { id: 'console', label: 'Scan Console' },
     { id: 'how-it-works', label: 'How It Works' },
     { id: 'guidelines', label: 'Guidelines' },
-    { id: 'manual-testing', label: 'Manual Testing' },
   ];
 
   return (

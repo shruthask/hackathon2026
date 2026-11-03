@@ -300,8 +300,22 @@
           <span>More Details</span> &rarr;
         </button>
       </div>
+
+      <!-- Scope Filter Toggle: Page Issues vs All Guidelines -->
+      <div class="ref-scope-bar">
+        <button id="ref-scope-detected-btn" class="ref-scope-pill active" data-scope="detected">
+          <span class="ref-scope-dot"></span>
+          <span>Found on This Page</span>
+          <span id="ref-detected-count" class="ref-scope-count">0</span>
+        </button>
+        <button id="ref-scope-all-btn" class="ref-scope-pill" data-scope="all">
+          <span>All Rules Library</span>
+          <span class="ref-scope-count">18</span>
+        </button>
+      </div>
+
       <div class="reference-header">
-        <input type="text" id="reference-search-input" placeholder="Search accessibility rules (e.g. alt, contrast, heading)…" />
+        <input type="text" id="reference-search-input" placeholder="Search rules (e.g. alt, contrast, heading, form, link)…" />
       </div>
       <div id="reference-rule-list" class="reference-rule-list">
         <!-- Rendered dynamically from rule encyclopedia -->

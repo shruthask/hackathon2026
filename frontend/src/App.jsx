@@ -4,7 +4,6 @@ import Hero from './components/Hero';
 import InputSection from './components/InputSection';
 import ResultsDashboard from './components/ResultsDashboard';
 import BeforeAfterComparison from './components/BeforeAfterComparison';
-import ManualTestingGuide from './components/ManualTestingGuide';
 import HowItWorks from './components/HowItWorks';
 import Guidelines from './components/Guidelines';
 import Footer from './components/Footer';
@@ -18,7 +17,7 @@ import {
 import { SAMPLES } from './utils/samples';
 
 export default function App() {
-  const [activeView, setActiveView] = useState('console'); // 'console', 'how-it-works', 'guidelines', 'manual-testing', 'compare'
+  const [activeView, setActiveView] = useState('console'); // 'console', 'how-it-works', 'guidelines', 'compare'
   const [backendStatus, setBackendStatus] = useState({ ok: false, checked: false });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -261,11 +260,6 @@ export default function App() {
         {/* Guidelines View */}
         {activeView === 'guidelines' && (
           <Guidelines onGoToConsole={() => setActiveView('console')} />
-        )}
-
-        {/* Manual Testing Guide View */}
-        {activeView === 'manual-testing' && (
-          <ManualTestingGuide onGoToConsole={() => setActiveView('console')} />
         )}
 
         {/* Before and After Comparison View */}
