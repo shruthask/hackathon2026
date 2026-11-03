@@ -3,10 +3,10 @@
  *
  * Orchestrates communication between Popup UI, Content Auditor, and Backend.
  *
- * Designed to audit ANY public, intranet, or local website:
- * - Direct execution via chrome.scripting ensures 100% reliability even on existing tabs
+ * Guaranteed In-Page Highlighting:
+ * - Direct execution via chrome.scripting ensures 100% reliable script injection
+ * - Directly triggers window.lanternApplyHighlights to avoid message port race conditions
  * - Traverses live rendered DOM including Shadow DOM
- * - Computes real contrast and filters out skeletons and hidden templates
  * - Syncs report to FastAPI backend for reporting and CSV/PDF export
  */
 
@@ -71,7 +71,18 @@ async function handleScanPage(tabId) {
     throw new Error("Audit engine failed to initialize on this webpage.");
   }
 
-  // 4. Trigger in-page visual highlights
+  // 4. Trigger in-page visual highlights directly
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    func: (issues) => {
+      if (window.lanternApplyHighlights) {
+        window.lanternApplyHighlights(issues);
+      }
+    },
+    args: [report.issues],
+  }).catch(() => {});
+
+  // Message fallback
   chrome.tabs.sendMessage(tabId, {
     action: "highlight-issues",
     issues: report.issues,

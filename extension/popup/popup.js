@@ -21,7 +21,6 @@ const resultsDashboardEl = document.getElementById("results-dashboard");
 
 const siteBadgeEl = document.getElementById("site-badge");
 const welcomeSiteNameEl = document.getElementById("welcome-site-name");
-const privacyCheckbox = document.getElementById("privacy-consent-checkbox");
 const startScanBtn = document.getElementById("start-scan-btn");
 const rescanBtn = document.getElementById("rescan-btn");
 const resetViewBtn = document.getElementById("reset-view-btn");
@@ -60,18 +59,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   siteBadgeEl.textContent = currentHostname;
   welcomeSiteNameEl.textContent = currentHostname;
 
-  // Privacy agreement controls Start Scan button state
-  privacyCheckbox.addEventListener("change", () => {
-    startScanBtn.disabled = !privacyCheckbox.checked;
-  });
-
   // Start & Rescan buttons
-  startScanBtn.addEventListener("click", () => {
-    if (privacyCheckbox.checked) {
-      triggerScan();
-    }
-  });
-
+  startScanBtn.addEventListener("click", triggerScan);
   rescanBtn.addEventListener("click", triggerScan);
 
   // Return to Start Screen / Privacy Settings
