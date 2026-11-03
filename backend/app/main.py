@@ -18,14 +18,16 @@ app = FastAPI(
 )
 
 # --- CORS -----------------------------------------------------------
-# Allow requests from the React dev server AND the Chrome extension
+# Allow requests from the React dev server (localhost & 127.0.0.1) AND Chrome extensions
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",      # React dev server
-        "http://localhost:5173",      # Vite dev server
-        "chrome-extension://*",       # Chrome extension
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
     ],
+    allow_origin_regex=r"^(http://(localhost|127\.0\.0\.1)(:\d+)?|chrome-extension://.*)$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
