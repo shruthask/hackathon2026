@@ -1,5 +1,6 @@
 import React from 'react';
 import { Sparkles, Heart } from 'lucide-react';
+import lanternLogo from '../assets/lantern-logo.png';
 
 export default function Footer() {
   return (
@@ -11,7 +12,7 @@ export default function Footer() {
           <div className="md:col-span-2">
             <div className="flex items-center gap-3 mb-3">
               <img 
-                src="./lantern-logo.png" 
+                src={lanternLogo} 
                 alt="Lantern Logo" 
                 className="h-8 w-auto object-contain"
               />

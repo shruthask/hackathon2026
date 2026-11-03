@@ -3,17 +3,20 @@
  * Connects the React Frontend to the FastAPI backend (Laptop 1 & 4)
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000';
+const API_BASE = (import.meta.env.VITE_API_BASE || 'http://localhost:8000').replace(/\/+$/, '');
+
+const isLocalhost = typeof window !== 'undefined' && 
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
 /**
  * Perform a fetch request with fallbacks (Direct API -> Vite Proxy)
  */
 async function apiRequest(endpoint, options = {}) {
-  // Try direct backend URL first, fallback to relative proxy if blocked
-  const urlsToTry = [
-    `${API_BASE}${endpoint}`,
-    endpoint // relative (via vite proxy)
-  ];
+  // On localhost, allow fallback to relative Vite dev proxy if direct port 8000 fails.
+  // In production (e.g. GitHub Pages), only call the configured API_BASE backend.
+  const urlsToTry = isLocalhost
+    ? [`${API_BASE}${endpoint}`, endpoint]
+    : [`${API_BASE}${endpoint}`];
 
   let lastError = null;
 
@@ -33,8 +36,17 @@ async function apiRequest(endpoint, options = {}) {
       return response;
     } catch (err) {
       lastError = err;
-      // If direct failed with network error, try next url
     }
+  }
+
+  // If on production and failed to reach API_BASE, provide a helpful message
+  if (!isLocalhost) {
+    throw new Error(
+      `Cannot connect to backend (${API_BASE}). ` +
+      (API_BASE.includes('localhost') 
+        ? 'Please configure VITE_API_BASE with your deployed backend URL in GitHub.' 
+        : 'The server may still be deploying or waking up from sleep. Please wait 30 seconds and try again.')
+    );
   }
 
   throw lastError;

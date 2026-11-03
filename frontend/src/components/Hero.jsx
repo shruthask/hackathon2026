@@ -1,6 +1,7 @@
 import React from 'react';
 import { Compass, Download, ArrowRight } from 'lucide-react';
 import AxialBeam from './AxialBeam';
+import lanternLogo from '../assets/lantern-logo.png';
 
 export default function Hero({ onStartAudit }) {
   return (
@@ -34,7 +35,7 @@ export default function Hero({ onStartAudit }) {
           {/* Brand Logo Centered */}
           <div className="flex items-center justify-center mb-6">
             <img 
-              src="/lantern-logo.png" 
+              src={lanternLogo} 
               alt="Lantern" 
               className="h-28 sm:h-36 md:h-44 w-auto object-contain drop-shadow-[0_20px_45px_rgba(242,140,40,0.3)] hover:scale-105 transition-transform duration-300"
             />
@@ -77,7 +78,7 @@ export default function Hero({ onStartAudit }) {
 
             {/* Box 2: Download Extension */}
             <a
-              href="/lantern-extension.zip"
+              href={`${import.meta.env.BASE_URL}lantern-extension.zip`}
               download="lantern-extension.zip"
               className="w-full sm:w-[250px] h-[72px] px-4 rounded-2xl bg-[#0B132B]/80 hover:bg-[#0E1938] text-white border border-slate-700/70 hover:border-[#F28C28]/80 shadow-xl shadow-black/30 hover:shadow-orange-500/10 hover:-translate-y-0.5 active:translate-y-0 backdrop-blur-xl transition-all duration-200 flex items-center gap-3.5 cursor-pointer group"
             >

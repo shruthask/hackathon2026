@@ -1,5 +1,6 @@
 import React from 'react';
 import { Compass } from 'lucide-react';
+import lanternLogo from '../assets/lantern-logo.png';
 
 export default function Navbar({ 
   activeView, 
@@ -24,7 +25,7 @@ export default function Navbar({
             onClick={() => setActiveView('console')}
           >
             <img 
-              src="./lantern-logo.png" 
+              src={lanternLogo} 
               alt="Lantern" 
               className="h-10 sm:h-11 w-auto object-contain transition-transform group-hover:scale-105"
             />
