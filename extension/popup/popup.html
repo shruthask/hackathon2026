@@ -14,8 +14,12 @@
     </div>
     <div class="header-actions">
       <span id="site-badge" class="site-badge" title="Active Tab Host">detecting…</span>
-      <button id="reset-view-btn" class="icon-btn hidden" title="Start screen & privacy settings">🏠</button>
-      <button id="rescan-btn" class="icon-btn hidden" title="Re-scan current page">🔄</button>
+      <button id="reset-view-btn" class="icon-btn hidden" title="Start screen & privacy settings">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      </button>
+      <button id="rescan-btn" class="icon-btn hidden" title="Re-scan current page">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      </button>
     </div>
   </header>
 
@@ -31,18 +35,24 @@
       Ready to analyze <strong id="welcome-site-name" class="highlight-domain">current page</strong> for WCAG 2.1 compliance barriers.
     </p>
 
-    <!-- Capabilities Highlights -->
+    <!-- Capabilities Highlights with Minimal SVG Icons -->
     <div class="features-grid">
       <div class="feature-item">
-        <span class="feat-icon">⚡</span>
+        <span class="feat-icon icon-amber">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        </span>
         <span class="feat-text">Live Computed Styles</span>
       </div>
       <div class="feature-item">
-        <span class="feat-icon">🎯</span>
+        <span class="feat-icon icon-rose">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+        </span>
         <span class="feat-text">In-Page Inspector</span>
       </div>
       <div class="feature-item">
-        <span class="feat-icon">🌐</span>
+        <span class="feat-icon icon-sky">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+        </span>
         <span class="feat-text">Shadow DOM Support</span>
       </div>
     </div>
@@ -50,7 +60,9 @@
     <!-- Privacy & Consent Agreement Card -->
     <div class="privacy-card">
       <div class="privacy-header">
-        <span class="shield-icon">🛡️</span>
+        <span class="shield-icon">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+        </span>
         <span class="privacy-title">Privacy & Local Processing Guarantee</span>
       </div>
       <p class="privacy-desc">
@@ -64,9 +76,11 @@
       </label>
     </div>
 
-    <!-- Start Scan CTA -->
+    <!-- Start Scan CTA with Minimal Action Icon -->
     <button id="start-scan-btn" class="primary-scan-btn">
-      <span class="btn-icon">🚀</span>
+      <span class="btn-icon">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      </span>
       <span class="btn-text">Start Accessibility Scan</span>
     </button>
   </div>
@@ -96,7 +110,10 @@
         <h3 id="score-title" class="score-title">Good Accessibility</h3>
         <p id="stats-summary" class="stats-text">Found 6 issues on this page</p>
         <div class="meta-row">
-          <span id="audit-duration" class="meta-tag">⚡ 28ms</span>
+          <span id="audit-duration" class="meta-tag">
+            <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px; vertical-align:-1px;"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            <span id="audit-duration-text">28ms</span>
+          </span>
           <span class="meta-tag engine-tag">Live DOM Engine</span>
         </div>
       </div>
@@ -135,10 +152,12 @@
       </div>
       <div class="toolbar-actions">
         <button id="toggle-highlights-btn" class="tool-btn active" title="Toggle In-Page Outlines">
-          👁️ Outlines
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span class="btn-label">Outlines</span>
         </button>
         <button id="export-csv-btn" class="tool-btn" title="Export as CSV Report">
-          📥 CSV
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span>CSV</span>
         </button>
       </div>
     </div>
@@ -154,15 +173,18 @@
     <!-- Manual Testing & Disclaimer Accordion -->
     <footer class="app-footer">
       <details class="guidance-accordion">
-        <summary>⚠️ WCAG Disclaimer & Manual Testing Guide</summary>
+        <summary>
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px; vertical-align:-1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          WCAG Disclaimer & Manual Testing Guide
+        </summary>
         <div class="guidance-content">
           <p class="disclaimer-note">
             Automated tools catch only a subset of accessibility barriers. Essential manual checks:
           </p>
           <ul class="manual-checklist">
-            <li><strong>⌨️ Keyboard Tab Test:</strong> Press <kbd>Tab</kbd> to ensure all interactive elements receive visible focus and are operable without a mouse.</li>
-            <li><strong>🗣️ Screen Reader:</strong> Test with VoiceOver (<kbd>Cmd + F5</kbd> on macOS) or NVDA on Windows.</li>
-            <li><strong>🔍 200% Zoom:</strong> Zoom browser to 200% to ensure layout reflows without overlapping content.</li>
+            <li><strong>Keyboard Tab Test:</strong> Press <kbd>Tab</kbd> to ensure all interactive elements receive visible focus and are operable without a mouse.</li>
+            <li><strong>Screen Reader:</strong> Test with VoiceOver (<kbd>Cmd + F5</kbd> on macOS) or NVDA on Windows.</li>
+            <li><strong>200% Zoom:</strong> Zoom browser to 200% to ensure layout reflows without overlapping content.</li>
           </ul>
         </div>
       </details>

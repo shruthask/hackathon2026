@@ -120,7 +120,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   toggleHighlightsBtn.addEventListener("click", () => {
     areHighlightsVisible = !areHighlightsVisible;
     toggleHighlightsBtn.classList.toggle("active", areHighlightsVisible);
-    toggleHighlightsBtn.textContent = areHighlightsVisible ? "👁️ Outlines" : "🚫 Hidden";
+    const labelSpan = toggleHighlightsBtn.querySelector(".btn-label");
+    if (labelSpan) {
+      labelSpan.textContent = areHighlightsVisible ? "Outlines" : "Hidden";
+    }
 
     if (activeTabId) {
       chrome.runtime.sendMessage({
@@ -198,7 +201,12 @@ function renderDashboard(report) {
   else scoreTitleEl.textContent = "Significant Accessibility Barriers";
 
   statsSummaryEl.textContent = `Found ${report.total_issues} issue(s) on ${report.hostname || currentHostname}`;
-  auditDurationEl.textContent = `⚡ ${report.duration_ms || 24}ms`;
+  const durationTextEl = document.getElementById("audit-duration-text");
+  if (durationTextEl) {
+    durationTextEl.textContent = `${report.duration_ms || 24}ms`;
+  } else if (auditDurationEl) {
+    auditDurationEl.textContent = `${report.duration_ms || 24}ms`;
+  }
 
   // 2. Counters
   countCriticalEl.textContent = report.summary?.critical || 0;
@@ -251,8 +259,9 @@ function renderFilteredIssues() {
         <span class="rule-id">${escapeHtml(issue.rule_id)}</span>
         ${
           issue.element_id
-            ? `<button class="inspect-btn" data-element-id="${escapeHtml(issue.element_id)}">
-                🎯 Inspect
+            ? `<button class="inspect-btn" data-element-id="${escapeHtml(issue.element_id)}" title="Scroll & Inspect Element">
+                <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
+                <span>Inspect</span>
                </button>`
             : ""
         }
@@ -263,7 +272,7 @@ function renderFilteredIssues() {
         <summary>How to fix</summary>
         <div class="card-fix-content">
           ${escapeHtml(issue.how_to_fix)}
-          ${issue.wcag_criteria ? `<div class="wcag-ref">📌 WCAG: ${escapeHtml(issue.wcag_criteria)}</div>` : ""}
+          ${issue.wcag_criteria ? `<div class="wcag-ref">WCAG: ${escapeHtml(issue.wcag_criteria)}</div>` : ""}
         </div>
       </details>
     `;
