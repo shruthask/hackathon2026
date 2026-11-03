@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 120" fill="none">
+  <!-- Handle -->
+  <path d="M35 24 C35 12, 65 12, 65 24" stroke="#1D4ED8" stroke-width="7" stroke-linecap="round" fill="none"/>
+  <!-- Top cap -->
+  <rect x="30" y="22" width="40" height="9" rx="4.5" fill="#1E3A8A"/>
+  <!-- Lantern Body -->
+  <path d="M26 31 L32 80 L68 80 L74 31 Z" stroke="#1E3A8A" stroke-width="8" stroke-linejoin="round" fill="#FFFFFF"/>
+  <rect x="24" y="80" width="52" height="9" rx="4.5" fill="#1E3A8A"/>
+  <!-- Inner Glow Flame -->
+  <path d="M50 42 C43 53 43 62 50 71 C57 62 57 53 50 42 Z" fill="#F97316"/>
+  <!-- Light Rays Below -->
+  <path d="M30 96 L20 110" stroke="#F97316" stroke-width="7" stroke-linecap="round"/>
+  <path d="M50 96 L50 112" stroke="#F97316" stroke-width="7" stroke-linecap="round"/>
+  <path d="M70 96 L80 110" stroke="#F97316" stroke-width="7" stroke-linecap="round"/>
+</svg>
