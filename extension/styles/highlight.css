@@ -98,7 +98,7 @@
 .lantern-order-badge {
   position: absolute !important;
   z-index: 2147483642 !important;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
   font-size: 11px !important;
   font-weight: 800 !important;
   line-height: 18px !important;
@@ -107,7 +107,7 @@
   padding: 0 4px !important;
   border-radius: 11px !important;
   color: #ffffff !important;
-  background: #1e3a8a !important;
+  background: #0B132B !important;
   border: 2px solid #ffffff !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
   cursor: pointer !important;
@@ -121,7 +121,8 @@
 
 .lantern-order-badge:hover {
   transform: scale(1.2) !important;
-  background: #f97316 !important;
+  background: #F28C28 !important;
+  color: #020617 !important;
 }
 
 .lantern-order-badge.suspicious {
@@ -130,9 +131,10 @@
 }
 
 .lantern-order-badge.active {
-  background: #f97316 !important;
+  background: #F28C28 !important;
+  color: #020617 !important;
   transform: scale(1.25) !important;
-  box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.4) !important;
+  box-shadow: 0 0 0 4px rgba(242, 140, 40, 0.45) !important;
 }
 
 /* Interactive Floating Tooltip Card */
