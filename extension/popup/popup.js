@@ -445,6 +445,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
+  // Restore current Styles toggle state for active tab
+  const storageArea = chrome.storage.session || chrome.storage.local;
+  if (storageArea && activeTabId) {
+    storageArea.get([`styles_state_${activeTabId}`], (result) => {
+      if (result && result[`styles_state_${activeTabId}`] !== undefined) {
+        const isEnabled = Boolean(result[`styles_state_${activeTabId}`]);
+        stylesToggle.checked = isEnabled;
+        stylesToggleLabel.textContent = isEnabled ? "Styles ON" : "Styles OFF";
+      }
+    });
+  }
+
   // Styles ON/OFF Toggle
   stylesToggle.addEventListener("change", (e) => {
     const enabled = e.target.checked;

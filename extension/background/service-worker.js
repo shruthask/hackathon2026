@@ -22,12 +22,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true; // asynchronous response
   }
 
+  if (message.action === "toggle-styles") {
+    handleToggleStyles(message.tabId, message.enable)
+      .then((data) => sendResponse({ success: true, data }))
+      .catch((err) => sendResponse({ success: false, error: err.message }));
+    return true;
+  }
+
   // Forward interactive page commands
   const forwardActions = new Set([
     "focus-issue",
     "toggle-highlights",
     "clear-highlights",
-    "toggle-styles",
     "show-focus-order",
     "hide-focus-order",
     "focus-order-item",
@@ -115,4 +121,46 @@ async function trySyncBackend(report) {
   } catch (e) {
     // Backend offline is normal in extension standalone mode
   }
+}
+
+/**
+ * Robust Styles ON/OFF Execution directly in the target webpage
+ */
+async function handleToggleStyles(tabId, enable) {
+  const tab = await chrome.tabs.get(tabId);
+  const url = tab.url || "";
+  if (
+    url.startsWith("chrome://") ||
+    url.startsWith("chrome-extension://") ||
+    url.startsWith("edge://") ||
+    url.startsWith("about:")
+  ) {
+    return { success: false, error: "Cannot modify styles on browser internal pages." };
+  }
+
+  // 1. Ensure content script is injected in the tab
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: ["content/auditor.js", "content/highlighter.js"],
+  }).catch(() => {});
+
+  // 2. Execute lanternToggleStyles in the page
+  const results = await chrome.scripting.executeScript({
+    target: { tabId },
+    func: (enableVal) => {
+      if (window.lanternToggleStyles) {
+        return window.lanternToggleStyles(enableVal);
+      }
+      return { success: false, error: "highlighter not ready" };
+    },
+    args: [enable],
+  });
+
+  // 3. Persist state in storage so popup stays in sync
+  const storageArea = chrome.storage.session || chrome.storage.local;
+  if (storageArea) {
+    await storageArea.set({ [`styles_state_${tabId}`]: enable }).catch(() => {});
+  }
+
+  return results?.[0]?.result || { success: true, stylesEnabled: enable };
 }

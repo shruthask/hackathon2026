@@ -181,29 +181,167 @@
     toggleRoot(document);
   }
 
-  // ── Styles ON/OFF Toggle Feature ─────────────────────────────────
+  // ── Styles ON/OFF Toggle Feature (WAVE-Inspired) ─────────────────
   window.lanternToggleStyles = function (enable) {
-    for (let i = 0; i < document.styleSheets.length; i++) {
-      const sheet = document.styleSheets[i];
-      try {
-        if (sheet.ownerNode && sheet.ownerNode.id === "lantern-core-styles") continue;
-        sheet.disabled = !enable;
-      } catch (e) {}
-    }
+    const OVERRIDE_ID = "lantern-unstyle-override";
+    let overrideStyle = document.getElementById(OVERRIDE_ID);
 
-    const styleNodes = document.querySelectorAll('link[rel="stylesheet"], style');
-    styleNodes.forEach((node) => {
-      if (node.id === "lantern-core-styles") return;
-      if (!enable) {
-        node.setAttribute("data-lantern-disabled-style", "true");
-        node.disabled = true;
-      } else {
-        if (node.hasAttribute("data-lantern-disabled-style")) {
-          node.removeAttribute("data-lantern-disabled-style");
-          node.disabled = false;
-        }
+    if (!enable) {
+      // 1. Disable all document styleSheets
+      for (let i = 0; i < document.styleSheets.length; i++) {
+        try {
+          const sheet = document.styleSheets[i];
+          if (sheet.ownerNode && (sheet.ownerNode.id === "lantern-core-styles" || sheet.ownerNode.id === OVERRIDE_ID)) continue;
+          sheet.disabled = true;
+        } catch (e) {}
       }
-    });
+
+      // 2. Disable link and style tags and set media="none"
+      const styleNodes = document.querySelectorAll('link[rel="stylesheet"], style');
+      styleNodes.forEach((node) => {
+        if (node.id === "lantern-core-styles" || node.id === OVERRIDE_ID) return;
+        if (!node.hasAttribute("data-lantern-disabled-style")) {
+          node.setAttribute("data-lantern-disabled-style", "true");
+          node.setAttribute("data-lantern-orig-media", node.getAttribute("media") || "");
+          node.setAttribute("media", "none");
+          node.disabled = true;
+        }
+      });
+
+      // 3. Inject full Linearization / Unstyle CSS (WAVE-style layout reset)
+      if (!overrideStyle) {
+        overrideStyle = document.createElement("style");
+        overrideStyle.id = OVERRIDE_ID;
+        overrideStyle.textContent = `
+          /* WAVE-Style Document Linearization & Unstyle Reset */
+          html, body {
+            background: #ffffff !important;
+            color: #000000 !important;
+            font-family: serif, Times, "Times New Roman" !important;
+            margin: 0 !important;
+            padding: 20px !important;
+          }
+
+          *:not([class*="lantern-"]):not([id*="lantern-"]) {
+            all: revert !important;
+            box-sizing: border-box !important;
+            max-width: 100% !important;
+            background-color: transparent !important;
+            background-image: none !important;
+            color: inherit !important;
+            font-family: inherit !important;
+            float: none !important;
+            clear: both !important;
+            position: static !important;
+            transform: none !important;
+            transition: none !important;
+            animation: none !important;
+            box-shadow: none !important;
+            text-shadow: none !important;
+            filter: none !important;
+          }
+
+          div, section, article, main, header, footer, nav, aside, p, blockquote, figure {
+            display: block !important;
+            margin-top: 0.5em !important;
+            margin-bottom: 0.5em !important;
+            width: auto !important;
+            height: auto !important;
+          }
+
+          h1 { display: block !important; font-size: 2em !important; font-weight: bold !important; margin: 0.67em 0 !important; }
+          h2 { display: block !important; font-size: 1.5em !important; font-weight: bold !important; margin: 0.83em 0 !important; }
+          h3 { display: block !important; font-size: 1.17em !important; font-weight: bold !important; margin: 1em 0 !important; }
+          h4 { display: block !important; font-size: 1em !important; font-weight: bold !important; margin: 1.33em 0 !important; }
+          h5 { display: block !important; font-size: 0.83em !important; font-weight: bold !important; margin: 1.67em 0 !important; }
+          h6 { display: block !important; font-size: 0.67em !important; font-weight: bold !important; margin: 2.33em 0 !important; }
+
+          ul, menu { display: block !important; list-style-type: disc !important; margin: 1em 0 !important; padding-left: 40px !important; }
+          ol { display: block !important; list-style-type: decimal !important; margin: 1em 0 !important; padding-left: 40px !important; }
+          li { display: list-item !important; margin: 0.25em 0 !important; }
+
+          a { color: #0000ee !important; text-decoration: underline !important; cursor: pointer !important; }
+          a:visited { color: #551a8b !important; }
+
+          input, textarea, select, button {
+            display: inline-block !important;
+            margin: 2px !important;
+            border: 1px solid #767676 !important;
+            background-color: #ffffff !important;
+            color: #000000 !important;
+            padding: 2px 4px !important;
+          }
+
+          img {
+            max-width: 320px !important;
+            height: auto !important;
+            display: inline-block !important;
+          }
+
+          table {
+            border-collapse: collapse !important;
+            margin: 1em 0 !important;
+            width: auto !important;
+          }
+          th, td {
+            border: 1px solid #cccccc !important;
+            padding: 6px 10px !important;
+          }
+
+          /* Keep Lantern Overlays & Pin Badges intact and visible */
+          .lantern-element-flagged {
+            outline-style: solid !important;
+            outline-width: 3px !important;
+            outline-offset: 2px !important;
+          }
+          .lantern-injected-badge {
+            position: absolute !important;
+            z-index: 2147483640 !important;
+            display: inline-flex !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+          }
+          .lantern-order-badge {
+            position: absolute !important;
+            z-index: 2147483642 !important;
+            display: flex !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+          }
+          .lantern-interactive-tooltip {
+            position: absolute !important;
+            z-index: 2147483647 !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+          }
+        `;
+        (document.head || document.documentElement).appendChild(overrideStyle);
+      }
+    } else {
+      // 1. Remove Linearization override style
+      if (overrideStyle) {
+        overrideStyle.remove();
+      }
+
+      // 2. Re-enable document styleSheets
+      for (let i = 0; i < document.styleSheets.length; i++) {
+        try {
+          const sheet = document.styleSheets[i];
+          if (sheet.ownerNode && sheet.ownerNode.id === "lantern-core-styles") continue;
+          sheet.disabled = false;
+        } catch (e) {}
+      }
+
+      // 3. Re-enable style and link nodes
+      const disabledNodes = document.querySelectorAll('[data-lantern-disabled-style="true"]');
+      disabledNodes.forEach((node) => {
+        node.removeAttribute("data-lantern-disabled-style");
+        const origMedia = node.getAttribute("data-lantern-orig-media");
+        if (origMedia !== null) {
+          if (origMedia) node.setAttribute("media", origMedia);
+          else node.removeAttribute("media");
+          node.removeAttribute("data-lantern-orig-media");
+        }
+        node.disabled = false;
+      });
+    }
 
     ensureHighlightStylesInjected();
     return { success: true, stylesEnabled: enable };

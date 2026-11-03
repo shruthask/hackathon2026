@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GreenLeaf Café | Community Food & Coffee</title>
+    <style>
+        :root {
+            --green: #245c45;
+            --cream: #fffaf0;
+            --pale: #e8f0e9;
+            --text: #25352d;
+            --muted: #cccccc;
+            --accent: #d98b38;
+            --border: #d8e1d9;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            color: var(--text);
+            background: var(--cream);
+            line-height: 1.6;
+        }
+        header {
+            background: var(--green);
+            color: white;
+            padding: 18px 7%;
+        }
+        .topbar, nav ul, .hero, .two-column, .menu-grid,
+        .review-grid, .footer-grid, .stats, .contact-row {
+            display: flex;
+            gap: 24px;
+        }
+        .topbar { align-items: center; justify-content: space-between; }
+        .brand { font-size: 1.5rem; font-weight: bold; letter-spacing: 1px; }
+        nav ul { list-style: none; padding: 0; margin: 12px 0 0; flex-wrap: wrap; }
+        nav a { color: white; text-decoration: none; padding: 8px 12px; }
+        nav a:hover { text-decoration: underline; }
+        main { max-width: 1180px; margin: auto; padding: 32px 24px; }
+        .hero {
+            align-items: center;
+            background: var(--pale);
+            border-radius: 18px;
+            padding: 30px;
+            margin-bottom: 42px;
+        }
+        .hero-copy, .hero-image { flex: 1; }
+        .hero-image img { width: 100%; border-radius: 14px; }
+        h1 { color: var(--green); font-size: 2.6rem; line-height: 1.15; }
+        h2 { color: var(--green); margin-top: 0; }
+        h3 { color: #315c46; }
+        .button {
+            display: inline-block;
+            background: var(--green);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 7px;
+            text-decoration: none;
+            margin-top: 12px;
+        }
+        section { margin: 42px 0; }
+        .stats { justify-content: space-around; background: white; padding: 22px; border-radius: 12px; }
+        .stat { text-align: center; flex: 1; }
+        .stat strong { display: block; color: var(--green); font-size: 1.8rem; }
+        .two-column > div { flex: 1; }
+        .feature-image { width: 100%; border-radius: 12px; }
+        .menu-grid, .review-grid { flex-wrap: wrap; }
+        .menu-card, .review-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 18px;
+            flex: 1 1 220px;
+        }
+        .menu-card img { width: 100%; height: 145px; object-fit: cover; border-radius: 8px; }
+        .price { color: var(--green); font-weight: bold; }
+        .tag { background: #f6e6d2; color: #70431d; padding: 4px 8px; border-radius: 20px; font-size: .8rem; }
+        .notice { background: #fff0d9; border-left: 5px solid var(--accent); padding: 16px; }
+        .gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        .gallery img { width: 100%; height: 170px; object-fit: cover; border-radius: 10px; }
+        .form-card { background: white; padding: 24px; border-radius: 12px; max-width: 720px; }
+        .form-row { margin: 16px 0; }
+        input, select, textarea {
+            width: 100%; padding: 12px; border: 1px solid #9aa99d;
+            border-radius: 6px; font: inherit;
+        }
+        button {
+            border: 0; background: var(--green); color: white;
+            padding: 12px 22px; border-radius: 6px; cursor: pointer;
+        }
+        .low-contrast { color: #cccccc; background: #ffffff; padding: 12px; }
+        .muted-note { color: #bdbdbd; }
+        footer { background: #193e30; color: white; padding: 35px 7%; }
+        footer a { color: white; }
+        .footer-grid { justify-content: space-between; flex-wrap: wrap; }
+        .footer-grid > div { flex: 1 1 180px; }
+        @media (max-width: 760px) {
+            .hero, .two-column, .topbar { flex-direction: column; }
+            .gallery { grid-template-columns: 1fr 1fr; }
+            .stats { flex-wrap: wrap; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="topbar">
+            <div class="brand">GreenLeaf Café</div>
+            <div>Fresh food. Thoughtful community.</div>
+        </div>
+        <nav>
+            <ul>
+                <li><a href="#home">Home</a></li>
+                <li><a href="#story">Our Story</a></li>
+                <li><a href="#menu">Menu</a></li>
+                <li><a href="#gallery">Gallery</a></li>
+                <li><a href="#events">Events</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero" id="home">
+            <div class="hero-copy">
+                <p class="tag">LOCAL • SEASONAL • WELCOMING</p>
+                <h1>A little good food can make a big difference.</h1>
+                <p>We serve fresh, seasonal meals and carefully brewed coffee in a friendly neighbourhood space.</p>
+                <a class="button" href="#menu">Explore our menu</a>
+            </div>
+            <div class="hero-image">
+                <img src="images/cafe-interior.jpg">
+            </div>
+        </section>
+
+        <section class="stats" aria-label="Cafe facts">
+            <div class="stat"><strong>2018</strong><span>Year founded</span></div>
+            <div class="stat"><strong>28</strong><span>Local suppliers</span></div>
+            <div class="stat"><strong>4.9/5</strong><span>Guest rating</span></div>
+        </section>
+
+        <section id="story">
+            <div class="two-column">
+                <div>
+                    <h2>Food with a neighbourhood spirit</h2>
+                    <p>GreenLeaf began with a simple idea: good food should bring people together. We work with nearby growers, bake in small batches and make room for everyone at our tables.</p>
+                    <p>Our menu changes with the seasons. We keep familiar favourites while introducing new dishes inspired by the ingredients available each week.</p>
+                    <p class="low-contrast">We believe every meal is an opportunity to care for our community.</p>
+                </div>
+                <div>
+                    <img class="feature-image" src="images/farmers-market.jpg" alt="Fresh vegetables arranged at a farmers market">
+                </div>
+            </div>
+        </section>
+
+        <section id="menu">
+            <h2>Popular from our kitchen</h2>
+            <p>Here are a few guest favourites. Ask our team about today's specials.</p>
+            <div class="menu-grid">
+                <article class="menu-card">
+                    <img src="images/avocado-toast.jpg">
+                    <h3>Garden Avocado Toast</h3>
+                    <p>Sourdough, smashed avocado, herbs and lemon.</p>
+                    <span class="price">₹240</span>
+                </article>
+                <article class="menu-card">
+                    <img src="images/seasonal-bowl.jpg" alt="Colourful seasonal grain bowl">
+                    <h3>Seasonal Harvest Bowl</h3>
+                    <p>Grains, roasted vegetables, greens and tahini dressing.</p>
+                    <span class="price">₹320</span>
+                </article>
+                <article class="menu-card">
+                    <img src="images/pancakes.jpg">
+                    <h3>Banana Oat Pancakes</h3>
+                    <p>Oat pancakes with banana, fruit and maple syrup.</p>
+                    <span class="price">₹280</span>
+                </article>
+                <article class="menu-card">
+                    <img src="images/coffee.jpg" alt="A cup of freshly brewed coffee">
+                    <h3>House Filter Coffee</h3>
+                    <p>Slow brewed coffee with a smooth, rich finish.</p>
+                    <span class="price">₹140</span>
+                </article>
+            </div>
+        </section>
+
+        <section class="notice">
+            <h2>Good to know</h2>
+            <p>We have plant-based choices, seasonal specials and takeaway packaging made with recyclable materials.</p>
+            <p class="muted-note">Please ask our team about ingredient and allergen information.</p>
+        </section>
+
+        <section id="gallery">
+            <h2>A look around GreenLeaf</h2>
+            <p>Our café is designed for slow mornings, friendly conversations and shared meals.</p>
+            <div class="gallery">
+                <img src="images/table.jpg" alt="A wooden table set for lunch">
+                <img src="images/bakery.jpg">
+                <img src="images/coffee-bar.jpg" alt="Coffee being prepared at the counter">
+                <img src="images/patio.jpg" alt="Outdoor café seating with plants">
+                <img src="images/bread.jpg" alt="Freshly baked bread on a tray">
+                <img src="images/team.jpg" alt="Cafe team standing together">
+            </div>
+        </section>
+
+        <section id="events">
+            <h2>Events and workshops</h2>
+            <div class="two-column">
+                <div>
+                    <h3>Saturday community table</h3>
+                    <p>Join us on the first Saturday of each month for a shared seasonal lunch and conversations with local growers.</p>
+                    <p><strong>Next gathering:</strong> Saturday, 11:00 AM</p>
+                </div>
+                <div>
+                    <h3>Learn to brew</h3>
+                    <p>Our small-group coffee workshops cover grind size, brewing methods and how to taste different beans.</p>
+                    <p><strong>Duration:</strong> 90 minutes</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="contact">
+            <h2>Visit or send us a message</h2>
+            <div class="two-column">
+                <div>
+                    <h3>Find us</h3>
+                    <p>18 Market Street<br>Bengaluru, Karnataka</p>
+                    <p>Monday–Sunday: 8:00 AM – 8:00 PM</p>
+                    <p>Email: hello@greenleaf.example</p>
+                </div>
+                <div class="form-card">
+                    <h3>Contact form</h3>
+                    <form>
+                        <div class="form-row">
+                            <input type="text" name="name" placeholder="Your name">
+                        </div>
+                        <div class="form-row">
+                            <input type="email" name="email" placeholder="Your email address">
+                        </div>
+                        <div class="form-row">
+                            <select name="topic">
+                                <option value="">Choose a topic</option>
+                                <option>Booking</option>
+                                <option>Events</option>
+                                <option>Feedback</option>
+                            </select>
+                        </div>
+                        <div class="form-row">
+                            <textarea name="message" rows="4" placeholder="Write your message"></textarea>
+                        </div>
+                        <button type="submit">Send message</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>What our guests say</h2>
+            <div class="review-grid">
+                <article class="review-card">
+                    <p>“A lovely place for breakfast. The staff are kind and the menu feels thoughtful.”</p>
+                    <strong>— Aanya</strong>
+                </article>
+                <article class="review-card">
+                    <p>“The coffee is excellent and I love that the menu changes with the seasons.”</p>
+                    <strong>— Rohan</strong>
+                </article>
+                <article class="review-card">
+                    <p>“A calm space to meet friends, work for an hour or enjoy a slow lunch.”</p>
+                    <strong>— Meera</strong>
+                </article>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-grid">
+            <div>
+                <h2>GreenLeaf Café</h2>
+                <p>Good food, good company, a lighter footprint.</p>
+            </div>
+            <div>
+                <h3>Explore</h3>
+                <p><a href="#story">Our story</a></p>
+                <p><a href="#menu">Menu</a></p>
+                <p><a href="#events">Events</a></p>
+            </div>
+            <div>
+                <h3>Follow along</h3>
+                <p><a href="#contact">Instagram</a></p>
+                <p><a href="#contact">Community updates</a></p>
+            </div>
+        </div>
+        <p>© 2026 GreenLeaf Café. Sample website for accessibility testing.</p>
+    </footer>
+</body>
+</html>
