@@ -1,9 +1,8 @@
 /**
  * Lantern – Popup Controller
  *
- * Manages Start Scan Screen with Persistent Privacy Consent,
- * Direct Script Execution (no port timeout drops), In-Page
- * Inspector Navigation, and CSV Report Export.
+ * Manages Start Scan Screen with Privacy Consent, Interactive Filters,
+ * In-Page Inspector Navigation, and CSV Report Export.
  */
 
 let currentReport = null;
@@ -14,14 +13,11 @@ let activeSeverities = new Set(["critical", "serious", "moderate", "minor"]);
 let searchKeyword = "";
 let areHighlightsVisible = true;
 
-// ── DOM Elements ────────────────────────────────────────────────────
+// DOM Elements
 const initialStateEl = document.getElementById("initial-state");
 const loadingStateEl = document.getElementById("loading-state");
 const loadingStepMsgEl = document.getElementById("loading-step-msg");
 const resultsDashboardEl = document.getElementById("results-dashboard");
-
-const errorBannerEl = document.getElementById("error-banner");
-const errorBannerTextEl = document.getElementById("error-banner-text");
 
 const siteBadgeEl = document.getElementById("site-badge");
 const welcomeSiteNameEl = document.getElementById("welcome-site-name");
@@ -48,50 +44,9 @@ const countMinorEl = document.getElementById("count-minor");
 const issueListEl = document.getElementById("issue-list");
 const emptyFilterMsgEl = document.getElementById("empty-filter-msg");
 
-// ── Resilient Active Tab Finder ─────────────────────────────────────
-async function getActiveWebTab() {
-  // Query 1: Current browser window active tab
-  try {
-    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-    const tab = tabs.find((t) => t && t.id && !t.url?.startsWith("chrome-extension://"));
-    if (tab) return tab;
-  } catch (e) {}
-
-  // Query 2: Last focused window active tab
-  try {
-    const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-    const tab = tabs.find((t) => t && t.id && !t.url?.startsWith("chrome-extension://"));
-    if (tab) return tab;
-  } catch (e) {}
-
-  // Query 3: Any active web tab
-  try {
-    const tabs = await chrome.tabs.query({ active: true });
-    const tab = tabs.find((t) => t && t.id && !t.url?.startsWith("chrome-extension://"));
-    if (tab) return tab;
-  } catch (e) {}
-
-  return null;
-}
-
-function showError(msg) {
-  loadingStateEl.classList.add("hidden");
-  initialStateEl.classList.remove("hidden");
-  if (errorBannerEl && errorBannerTextEl) {
-    errorBannerTextEl.textContent = msg;
-    errorBannerEl.classList.remove("hidden");
-  }
-}
-
-function hideError() {
-  if (errorBannerEl) {
-    errorBannerEl.classList.add("hidden");
-  }
-}
-
 // ── Initialization ──────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", async () => {
-  const tab = await getActiveWebTab();
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (tab) {
     activeTabId = tab.id;
     try {
@@ -100,52 +55,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (e) {
       currentHostname = "local page";
     }
-
-    const url = tab.url || "";
-    if (
-      url.startsWith("chrome://") ||
-      url.startsWith("edge://") ||
-      url.startsWith("about:")
-    ) {
-      showError("Cannot audit internal browser pages. Please open a website (like YouTube, Wikipedia, or your own site) and reopen Lantern.");
-      startScanBtn.disabled = true;
-    } else if (url.startsWith("file://") && chrome.extension && chrome.extension.isAllowedFileSchemeAccess) {
-      chrome.extension.isAllowedFileSchemeAccess((isAllowed) => {
-        if (!isAllowed) {
-          showError("Local file detected: To audit local files, please go to chrome://extensions -> Lantern 'Details', and enable 'Allow access to file URLs'.");
-        }
-      });
-    }
   }
 
   siteBadgeEl.textContent = currentHostname;
   welcomeSiteNameEl.textContent = currentHostname;
 
-  const privacyCardEl = document.getElementById("privacy-card");
-  const privacyAgreedBadgeEl = document.getElementById("privacy-agreed-badge");
-
-  // Check persistent privacy agreement in chrome.storage.local
-  chrome.storage.local.get(["lantern_privacy_agreed"], (result) => {
-    if (result && result.lantern_privacy_agreed) {
-      if (privacyCardEl) privacyCardEl.classList.add("hidden");
-      if (privacyAgreedBadgeEl) privacyAgreedBadgeEl.classList.remove("hidden");
-      startScanBtn.disabled = false;
-    }
+  // Privacy agreement controls Start Scan button state
+  privacyCheckbox.addEventListener("change", () => {
+    startScanBtn.disabled = !privacyCheckbox.checked;
   });
 
-  // Privacy agreement controls Start Scan button state
-  if (privacyCheckbox) {
-    privacyCheckbox.addEventListener("change", () => {
-      startScanBtn.disabled = !privacyCheckbox.checked;
-    });
-  }
-
-  // Start Scan button click
+  // Start & Rescan buttons
   startScanBtn.addEventListener("click", () => {
-    hideError();
-    // Remember consent permanently
-    chrome.storage.local.set({ lantern_privacy_agreed: true });
-    triggerScan();
+    if (privacyCheckbox.checked) {
+      triggerScan();
+    }
   });
 
   rescanBtn.addEventListener("click", triggerScan);
@@ -202,7 +126,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     if (activeTabId) {
-      toggleHighlightsDirect(activeTabId, areHighlightsVisible);
+      chrome.runtime.sendMessage({
+        action: "toggle-highlights",
+        tabId: activeTabId,
+        visible: areHighlightsVisible,
+      });
     }
   });
 
@@ -210,115 +138,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   exportCsvBtn.addEventListener("click", exportResultsToCSV);
 });
 
-// ── Direct Execution Core (Eliminates Port Disconnection Errors) ─────
-async function runAuditDirect(tabId) {
-  // 1. Inject highlight styles
-  await chrome.scripting.insertCSS({
-    target: { tabId },
-    files: ["styles/highlight.css"],
-  }).catch(() => {});
-
-  // 2. Inject auditor and highlighter scripts
-  await chrome.scripting.executeScript({
-    target: { tabId },
-    files: ["content/auditor.js", "content/highlighter.js"],
-  });
-
-  // 3. Execute audit directly in the page context
-  const results = await chrome.scripting.executeScript({
-    target: { tabId },
-    func: () => {
-      if (typeof window.lanternRunAudit === "function") {
-        return window.lanternRunAudit();
-      }
-      return null;
-    },
-  });
-
-  const report = results?.[0]?.result;
-  if (!report) {
-    throw new Error("Audit engine did not return results. The page may have blocked script execution or is still loading.");
-  }
-
-  // 4. Apply in-page highlights
-  await chrome.scripting.executeScript({
-    target: { tabId },
-    func: (issues) => {
-      if (typeof window.lanternApplyHighlights === "function") {
-        window.lanternApplyHighlights(issues);
-      }
-    },
-    args: [report.issues || []],
-  }).catch(() => {});
-
-  // 5. Best-effort async sync to FastAPI backend (if running)
-  fetch("http://localhost:8000/api/scan/audit-sync", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(report),
-  }).catch(() => {});
-
-  return report;
-}
-
-async function focusIssueDirect(tabId, elementId) {
-  try {
-    await chrome.scripting.executeScript({
-      target: { tabId },
-      func: (elId) => {
-        if (typeof window.lanternFocusIssue === "function") {
-          return window.lanternFocusIssue(elId);
-        }
-        return false;
-      },
-      args: [elementId],
-    });
-  } catch (e) {
-    chrome.runtime.sendMessage({ action: "focus-issue", tabId, elementId }, () => {
-      if (chrome.runtime.lastError) {}
-    });
-  }
-}
-
-async function toggleHighlightsDirect(tabId, visible) {
-  try {
-    await chrome.scripting.executeScript({
-      target: { tabId },
-      func: (vis) => {
-        if (typeof window.lanternToggleHighlights === "function") {
-          window.lanternToggleHighlights(vis);
-        }
-      },
-      args: [visible],
-    });
-  } catch (e) {
-    chrome.runtime.sendMessage({ action: "toggle-highlights", tabId, visible }, () => {
-      if (chrome.runtime.lastError) {}
-    });
-  }
-}
-
 // ── Trigger Scan with Step Feedback ─────────────────────────────────
 async function triggerScan() {
-  hideError();
-
-  // Ensure active tab is resolved
-  const tab = await getActiveWebTab();
-  if (!tab || !tab.id) {
-    showError("No active web page detected. Please open any webpage (http://, https://, or file://) and try again.");
-    return;
-  }
-  activeTabId = tab.id;
-
-  const url = tab.url || "";
-  if (
-    url.startsWith("chrome://") ||
-    url.startsWith("edge://") ||
-    url.startsWith("about:")
-  ) {
-    showError("Cannot audit internal browser pages. Please open any web page (e.g. YouTube, Wikipedia, or your own site).");
-    return;
-  }
+  if (!activeTabId) return;
 
   initialStateEl.classList.add("hidden");
   resultsDashboardEl.classList.add("hidden");
@@ -339,36 +161,27 @@ async function triggerScan() {
     }
   }, 450);
 
-  try {
-    const report = await runAuditDirect(activeTabId);
-    clearInterval(stepInterval);
-    loadingStateEl.classList.add("hidden");
-    currentReport = report;
-    renderDashboard(currentReport);
+  chrome.runtime.sendMessage(
+    { action: "scan-page", tabId: activeTabId },
+    (response) => {
+      clearInterval(stepInterval);
+      loadingStateEl.classList.add("hidden");
 
-    // Reveal header navigation buttons
-    rescanBtn.classList.remove("hidden");
-    resetViewBtn.classList.remove("hidden");
-  } catch (err) {
-    clearInterval(stepInterval);
-    console.error("Direct audit error:", err);
-    // Fall back to service worker if direct scripting encountered an edge case
-    chrome.runtime.sendMessage(
-      { action: "scan-page", tabId: activeTabId },
-      (response) => {
-        if (chrome.runtime.lastError || !response?.success) {
-          const msg = response?.error || err.message || "Could not complete scan on this webpage.";
-          showError(msg);
-          return;
-        }
-        loadingStateEl.classList.add("hidden");
-        currentReport = response.data;
-        renderDashboard(currentReport);
-        rescanBtn.classList.remove("hidden");
-        resetViewBtn.classList.remove("hidden");
+      if (!response || !response.success) {
+        initialStateEl.classList.remove("hidden");
+        const msg = response?.error || "Could not complete scan.";
+        alert(`Audit Error: ${msg}`);
+        return;
       }
-    );
-  }
+
+      currentReport = response.data;
+      renderDashboard(currentReport);
+
+      // Reveal header navigation buttons
+      rescanBtn.classList.remove("hidden");
+      resetViewBtn.classList.remove("hidden");
+    }
+  );
 }
 
 // ── Render Dashboard ────────────────────────────────────────────────
@@ -470,7 +283,11 @@ function renderFilteredIssues() {
       inspectBtn.addEventListener("click", () => {
         const elId = inspectBtn.getAttribute("data-element-id");
         if (elId && activeTabId) {
-          focusIssueDirect(activeTabId, elId);
+          chrome.runtime.sendMessage({
+            action: "focus-issue",
+            tabId: activeTabId,
+            elementId: elId,
+          });
         }
       });
     }

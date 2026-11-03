@@ -4,8 +4,7 @@
  * Orchestrates communication between Popup UI, Content Auditor, and Backend.
  *
  * Designed to audit ANY public, intranet, or local website:
- * - Direct execution via chrome.scripting ensures 100% reliability without
- *   "Receiving end does not exist" port connection errors
+ * - Direct execution via chrome.scripting ensures 100% reliability even on existing tabs
  * - Traverses live rendered DOM including Shadow DOM
  * - Computes real contrast and filters out skeletons and hidden templates
  * - Syncs report to FastAPI backend for reporting and CSV/PDF export
@@ -22,74 +21,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true; // asynchronous response
   }
 
-  if (message.action === "focus-issue") {
-    chrome.scripting
-      .executeScript({
-        target: { tabId: message.tabId },
-        func: (elId) => {
-          if (window.lanternFocusIssue) {
-            return window.lanternFocusIssue(elId);
-          }
-          return false;
-        },
-        args: [message.elementId],
-      })
-      .then(([res]) => {
-        sendResponse({ success: res?.result ?? true });
-      })
-      .catch((err) => {
-        // Fallback message with safe error suppression
-        chrome.tabs.sendMessage(message.tabId, message, (resp) => {
-          if (chrome.runtime.lastError) {
-            const _ignored = chrome.runtime.lastError.message;
-          }
-          sendResponse(resp || { success: false });
-        });
-      });
-    return true;
-  }
-
-  if (message.action === "toggle-highlights") {
-    chrome.scripting
-      .executeScript({
-        target: { tabId: message.tabId },
-        func: (visible) => {
-          if (window.lanternToggleHighlights) {
-            window.lanternToggleHighlights(visible);
-          }
-        },
-        args: [message.visible],
-      })
-      .then(() => {
-        sendResponse({ success: true });
-      })
-      .catch((err) => {
-        chrome.tabs.sendMessage(message.tabId, message, (resp) => {
-          if (chrome.runtime.lastError) {
-            const _ignored = chrome.runtime.lastError.message;
-          }
-          sendResponse(resp || { success: true });
-        });
-      });
-    return true;
-  }
-
-  if (message.action === "clear-highlights") {
-    chrome.scripting
-      .executeScript({
-        target: { tabId: message.tabId },
-        func: () => {
-          if (window.lanternClearHighlights) {
-            window.lanternClearHighlights();
-          }
-        },
-      })
-      .then(() => {
-        sendResponse({ success: true });
-      })
-      .catch(() => {
-        sendResponse({ success: true });
-      });
+  if (
+    message.action === "focus-issue" ||
+    message.action === "toggle-highlights" ||
+    message.action === "clear-highlights"
+  ) {
+    chrome.tabs.sendMessage(message.tabId, message, (resp) => {
+      sendResponse(resp || { success: true });
+    });
     return true;
   }
 });
@@ -132,15 +71,10 @@ async function handleScanPage(tabId) {
     throw new Error("Audit engine failed to initialize on this webpage.");
   }
 
-  // 4. Trigger in-page visual highlights directly
-  await chrome.scripting.executeScript({
-    target: { tabId },
-    func: (issues) => {
-      if (window.lanternApplyHighlights) {
-        window.lanternApplyHighlights(issues);
-      }
-    },
-    args: [report.issues],
+  // 4. Trigger in-page visual highlights
+  chrome.tabs.sendMessage(tabId, {
+    action: "highlight-issues",
+    issues: report.issues,
   }).catch(() => {});
 
   // 5. Best-effort async sync to FastAPI backend (if running)
