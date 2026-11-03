@@ -60,16 +60,31 @@ document.addEventListener("DOMContentLoaded", async () => {
   siteBadgeEl.textContent = currentHostname;
   welcomeSiteNameEl.textContent = currentHostname;
 
-  // Privacy agreement controls Start Scan button state
-  privacyCheckbox.addEventListener("change", () => {
-    startScanBtn.disabled = !privacyCheckbox.checked;
+  const privacyCardEl = document.getElementById("privacy-card");
+  const privacyAgreedBadgeEl = document.getElementById("privacy-agreed-badge");
+
+  // Check persistent privacy agreement in chrome.storage.local
+  chrome.storage.local.get(["lantern_privacy_agreed"], (result) => {
+    if (result && result.lantern_privacy_agreed) {
+      // User has agreed once: hide the roadblock card, show subtle badge
+      if (privacyCardEl) privacyCardEl.classList.add("hidden");
+      if (privacyAgreedBadgeEl) privacyAgreedBadgeEl.classList.remove("hidden");
+      startScanBtn.disabled = false;
+    }
   });
+
+  // Privacy agreement controls Start Scan button state
+  if (privacyCheckbox) {
+    privacyCheckbox.addEventListener("change", () => {
+      startScanBtn.disabled = !privacyCheckbox.checked;
+    });
+  }
 
   // Start & Rescan buttons
   startScanBtn.addEventListener("click", () => {
-    if (privacyCheckbox.checked) {
-      triggerScan();
-    }
+    // Remember consent permanently
+    chrome.storage.local.set({ lantern_privacy_agreed: true });
+    triggerScan();
   });
 
   rescanBtn.addEventListener("click", triggerScan);

@@ -57,8 +57,8 @@
       </div>
     </div>
 
-    <!-- Privacy & Consent Agreement Card -->
-    <div class="privacy-card">
+    <!-- Privacy & Consent Agreement Card (Shown only on first launch) -->
+    <div id="privacy-card" class="privacy-card">
       <div class="privacy-header">
         <span class="shield-icon">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
@@ -74,6 +74,12 @@
           I understand the privacy conditions & agree to run local accessibility analysis on this page.
         </span>
       </label>
+    </div>
+
+    <!-- Compact status for returning users who have already agreed -->
+    <div id="privacy-agreed-badge" class="privacy-status-pill hidden">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+      <span>Privacy Consented &middot; 100% Local In-Browser Scan</span>
     </div>
 
     <!-- Start Scan CTA with Minimal Action Icon -->
