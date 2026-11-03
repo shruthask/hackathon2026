@@ -1,15 +1,16 @@
 /**
- * Lantern – Advanced In-Browser DOM Accessibility Auditor
+ * Lantern – Advanced In-Browser DOM Accessibility Auditor (WAVE-Inspired)
  *
  * Runs directly in the live webpage context to audit ANY website:
  * - Traverses Shadow DOM roots (YouTube, Polymer, Web Components, Custom Elements)
- * - Strict visibility detection: filters out templates, skeletons, and tracking pixels
- * - Live computed contrast with alpha-blending
+ * - Details Categories: Errors, Contrast Errors, Alerts, Features (positive!), Structure, ARIA
+ * - Tab 3 Order: Keyboard focus order analysis & positive tabindex detection
+ * - Tab 4 Structure: Hierarchical heading & landmark outline tree
+ * - Tab 5 Contrast: Live computed contrast, WCAG AA/AAA compliance, & automated color suggestions
  * - Capped rule-based scoring (like Lighthouse) to prevent false-positive score zeroing
  */
 
 (function () {
-  // Allow re-audit on subsequent button clicks
   window.__LANTERN_AUDITOR_LOADED__ = true;
 
   let issueCounter = 0;
@@ -24,6 +25,17 @@
     function traverse(node) {
       if (!node) return;
       if (node.nodeType === Node.ELEMENT_NODE) {
+        // Ignore Lantern's own UI elements
+        if (
+          node.classList &&
+          (node.classList.contains("lantern-injected-badge") ||
+            node.classList.contains("lantern-interactive-tooltip") ||
+            node.classList.contains("lantern-order-badge") ||
+            node.id === "lantern-core-styles")
+        ) {
+          return;
+        }
+
         try {
           if (node.matches && node.matches(selector)) {
             results.push(node);
@@ -64,7 +76,6 @@
     }
 
     const rect = el.getBoundingClientRect();
-    // Element must have non-zero geometry or non-empty visible text
     if (rect.width <= 1 && rect.height <= 1) {
       return false;
     }
@@ -114,6 +125,31 @@
     return path.join(" > ");
   }
 
+  function getAccessibleName(el) {
+    if (!el) return "";
+    // 1. aria-label
+    if (el.getAttribute("aria-label")?.trim()) {
+      return el.getAttribute("aria-label").trim();
+    }
+    // 2. aria-labelledby
+    if (el.getAttribute("aria-labelledby")?.trim()) {
+      const ids = el.getAttribute("aria-labelledby").trim().split(/\s+/);
+      const textParts = ids
+        .map((id) => document.getElementById(id)?.innerText || "")
+        .filter(Boolean);
+      if (textParts.length) return textParts.join(" ").trim();
+    }
+    // 3. title or alt or value
+    if (el.getAttribute("title")?.trim()) return el.getAttribute("title").trim();
+    if (el.getAttribute("alt")?.trim()) return el.getAttribute("alt").trim();
+    if (el.getAttribute("value")?.trim()) return el.getAttribute("value").trim();
+    if (el.getAttribute("placeholder")?.trim()) return el.getAttribute("placeholder").trim();
+    // 4. innerText or textContent
+    const inner = (el.innerText || el.textContent || "").trim();
+    if (inner) return inner.slice(0, 50);
+    return "";
+  }
+
   // ── Color & Contrast Engine ─────────────────────────────────────
   function parseRgba(colorStr) {
     if (!colorStr) return null;
@@ -129,11 +165,16 @@
     return null;
   }
 
+  function rgbToHex(rgb) {
+    const toHex = (c) => Math.max(0, Math.min(255, Math.round(c))).toString(16).padStart(2, "0");
+    return `#${toHex(rgb.r)}${toHex(rgb.g)}${toHex(rgb.b)}`;
+  }
+
   function blendColors(fg, bg) {
     const alpha = fg.a;
     return {
       r: Math.round(fg.r * alpha + bg.r * (1 - alpha)),
-      g: Math.round(fg.g * alpha + bg.r * (1 - alpha)),
+      g: Math.round(fg.g * alpha + bg.g * (1 - alpha)),
       b: Math.round(fg.b * alpha + bg.b * (1 - alpha)),
       a: 1.0,
     };
@@ -176,11 +217,40 @@
     return (lighter + 0.05) / (darker + 0.05);
   }
 
+  function calculateSuggestedColor(fg, bg, targetRatio = 4.5) {
+    const bgLum = relativeLuminance(bg);
+    const darken = bgLum >= 0.5;
+    let r = fg.r, g = fg.g, b = fg.b;
+    let bestColor = { r, g, b, a: 1 };
+    let bestRatio = getContrastRatio(bestColor, bg);
+
+    for (let step = 0; step <= 255; step += 4) {
+      if (bestRatio >= targetRatio) break;
+      if (darken) {
+        r = Math.max(0, r - 4);
+        g = Math.max(0, g - 4);
+        b = Math.max(0, b - 4);
+      } else {
+        r = Math.min(255, r + 4);
+        g = Math.min(255, g + 4);
+        b = Math.min(255, b + 4);
+      }
+      const testFg = { r, g, b, a: 1 };
+      const ratio = getContrastRatio(testFg, bg);
+      bestColor = testFg;
+      bestRatio = ratio;
+    }
+    return {
+      hex: rgbToHex(bestColor),
+      ratio: bestRatio,
+    };
+  }
+
   // ── AUDIT RULESETS ──────────────────────────────────────────────
   const genericAltPattern = /^(image|graphic|photo|picture|icon|screenshot|banner|logo)(\.(png|jpg|jpeg|gif|webp|svg))?$/i;
   const fileExtAltPattern = /\.(png|jpg|jpeg|gif|webp|svg)$/i;
 
-  function auditImages(issues) {
+  function auditImages(issues, features) {
     const images = querySelectorAllDeep("img, [role='img'], svg, input[type='image']");
     let flaggedCount = 0;
     const maxFlagged = 40;
@@ -201,7 +271,6 @@
         const dataSrc = el.getAttribute("data-src");
         const srcset = el.getAttribute("srcset");
 
-        // Filter out empty skeleton template placeholders
         if (!src && !dataSrc && !srcset) continue;
         if (src.includes("data:image/gif;base64,R0lGODlhAQAB")) continue;
 
@@ -220,6 +289,7 @@
           issues.push({
             rule_id: "img-alt-missing",
             category: "images",
+            wave_category: "errors",
             severity: "critical",
             element_id: id,
             element: getReadableSnippet(el),
@@ -237,6 +307,7 @@
           issues.push({
             rule_id: "img-alt-empty-link",
             category: "images",
+            wave_category: "errors",
             severity: "critical",
             element_id: id,
             element: getReadableSnippet(el),
@@ -250,12 +321,27 @@
           issues.push({
             rule_id: "img-alt-uninformative",
             category: "images",
+            wave_category: "alerts",
             severity: "moderate",
             element_id: id,
             element: getReadableSnippet(el),
             selector: generateSelector(el),
             message: `Image alt text "${alt}" is generic or is just a file name.`,
             how_to_fix: "Replace generic placeholder alt text with meaningful words describing the image.",
+            wcag_criteria: "1.1.1 Non-text Content (Level A)",
+          });
+        } else if (alt.trim().length > 2 && features.length < 25) {
+          // Positive feature!
+          features.push({
+            rule_id: "feature-alt-text",
+            category: "images",
+            wave_category: "features",
+            severity: "feature",
+            element_id: id,
+            element: getReadableSnippet(el),
+            selector: generateSelector(el),
+            message: `Image has descriptive alt text: "${alt.slice(0, 40)}${alt.length > 40 ? "..." : ""}"`,
+            how_to_fix: "Maintained good practice. Ensure alt text stays up-to-date with image changes.",
             wcag_criteria: "1.1.1 Non-text Content (Level A)",
           });
         }
@@ -271,6 +357,7 @@
             issues.push({
               rule_id: "svg-missing-accessible-name",
               category: "images",
+              wave_category: "alerts",
               severity: "moderate",
               element_id: id,
               element: getReadableSnippet(el),
@@ -285,7 +372,7 @@
     }
   }
 
-  function auditHeadings(issues) {
+  function auditHeadings(issues, features) {
     const headings = querySelectorAllDeep("h1, h2, h3, h4, h5, h6, [role='heading']").filter(
       isElementVisible
     );
@@ -294,6 +381,7 @@
       issues.push({
         rule_id: "heading-missing-all",
         category: "headings",
+        wave_category: "errors",
         severity: "serious",
         element_id: null,
         element: "<body>",
@@ -318,6 +406,7 @@
       issues.push({
         rule_id: "heading-missing-h1",
         category: "headings",
+        wave_category: "alerts",
         severity: "serious",
         element_id: id,
         element: getReadableSnippet(first),
@@ -326,12 +415,25 @@
         how_to_fix: "Add an <h1> at the top of the main content area or promote the first heading to <h1>.",
         wcag_criteria: "1.3.1 Info and Relationships (Level A)",
       });
+    } else if (h1s.length === 1 && features.length < 25) {
+      features.push({
+        rule_id: "feature-h1-present",
+        category: "headings",
+        wave_category: "features",
+        severity: "feature",
+        element_id: h1s[0].getAttribute("data-lantern-id") || getUniqueLanternId(),
+        element: getReadableSnippet(h1s[0]),
+        selector: generateSelector(h1s[0]),
+        message: `Primary <h1> heading present: "${getAccessibleName(h1s[0]) || "Page Title"}"`,
+        how_to_fix: "Good document outline practice.",
+        wcag_criteria: "1.3.1 Info and Relationships (Level A)",
+      });
     }
 
     let prevLevel = 0;
     headings.forEach((h) => {
       const text = (h.innerText || h.textContent || "").trim();
-      const id = getUniqueLanternId();
+      const id = h.getAttribute("data-lantern-id") || getUniqueLanternId();
       h.setAttribute("data-lantern-id", id);
 
       let level = parseInt(h.tagName.substring(1), 10);
@@ -343,6 +445,7 @@
         issues.push({
           rule_id: "heading-empty",
           category: "headings",
+          wave_category: "errors",
           severity: "serious",
           element_id: id,
           element: getReadableSnippet(h),
@@ -357,6 +460,7 @@
         issues.push({
           rule_id: "heading-order-skip",
           category: "headings",
+          wave_category: "alerts",
           severity: "serious",
           element_id: id,
           element: getReadableSnippet(h),
@@ -370,7 +474,7 @@
     });
   }
 
-  function auditForms(issues) {
+  function auditForms(issues, features) {
     const controls = querySelectorAllDeep("input, select, textarea");
     const exemptTypes = new Set(["hidden", "submit", "button", "reset", "image"]);
 
@@ -383,14 +487,17 @@
 
       const idAttr = el.id;
       let hasLabel = false;
+      let labelType = "";
 
       // 1. ARIA label or labelledby
       if (el.getAttribute("aria-label")?.trim()) {
         hasLabel = true;
+        labelType = "aria-label";
       } else if (el.getAttribute("aria-labelledby")?.trim()) {
         const labelEl = document.getElementById(el.getAttribute("aria-labelledby").trim());
         if (labelEl && (labelEl.innerText || labelEl.textContent || "").trim()) {
           hasLabel = true;
+          labelType = "aria-labelledby";
         }
       }
 
@@ -399,6 +506,7 @@
         const matchingLabel = document.querySelector(`label[for="${CSS.escape(idAttr)}"]`);
         if (matchingLabel && (matchingLabel.innerText || matchingLabel.textContent || "").trim()) {
           hasLabel = true;
+          labelType = "label-for";
         }
       }
 
@@ -407,12 +515,14 @@
         const parentLabel = el.closest("label");
         if (parentLabel && (parentLabel.innerText || parentLabel.textContent || "").trim()) {
           hasLabel = true;
+          labelType = "wrapping-label";
         }
       }
 
       // 4. Title attribute
       if (!hasLabel && el.getAttribute("title")?.trim()) {
         hasLabel = true;
+        labelType = "title";
       }
 
       const id = getUniqueLanternId();
@@ -424,6 +534,7 @@
           issues.push({
             rule_id: "form-label-placeholder-only",
             category: "forms",
+            wave_category: "alerts",
             severity: "serious",
             element_id: id,
             element: getReadableSnippet(el),
@@ -436,6 +547,7 @@
           issues.push({
             rule_id: "form-label-missing",
             category: "forms",
+            wave_category: "errors",
             severity: "critical",
             element_id: id,
             element: getReadableSnippet(el),
@@ -445,6 +557,19 @@
             wcag_criteria: "1.3.1 Info and Relationships / 3.3.2 Labels or Instructions",
           });
         }
+      } else if (features.length < 25) {
+        features.push({
+          rule_id: "feature-form-label",
+          category: "forms",
+          wave_category: "features",
+          severity: "feature",
+          element_id: id,
+          element: getReadableSnippet(el),
+          selector: generateSelector(el),
+          message: `Form control <${tag}> has accessible label via ${labelType}: "${getAccessibleName(el)}"`,
+          how_to_fix: "Maintained good practice.",
+          wcag_criteria: "3.3.2 Labels or Instructions (Level A)",
+        });
       }
     });
 
@@ -460,12 +585,14 @@
       const imgAlt = btn.querySelector("img")?.getAttribute("alt")?.trim();
       const svgTitle = btn.querySelector("svg title")?.textContent?.trim();
 
+      const id = btn.getAttribute("data-lantern-id") || getUniqueLanternId();
+      btn.setAttribute("data-lantern-id", id);
+
       if (!text && !ariaLabel && !ariaLabelledby && !title && !value && !imgAlt && !svgTitle) {
-        const id = getUniqueLanternId();
-        btn.setAttribute("data-lantern-id", id);
         issues.push({
           rule_id: "button-missing-accessible-name",
           category: "forms",
+          wave_category: "errors",
           severity: "critical",
           element_id: id,
           element: getReadableSnippet(btn),
@@ -474,11 +601,24 @@
           how_to_fix: 'Add visible text, an aria-label="Description", or alt text to the icon inside the button.',
           wcag_criteria: "4.1.2 Name, Role, Value (Level A)",
         });
+      } else if ((ariaLabel || text) && features.length < 25) {
+        features.push({
+          rule_id: "feature-button-name",
+          category: "forms",
+          wave_category: "features",
+          severity: "feature",
+          element_id: id,
+          element: getReadableSnippet(btn),
+          selector: generateSelector(btn),
+          message: `Button has accessible name: "${(ariaLabel || text).slice(0, 35)}"`,
+          how_to_fix: "Good interactive control accessibility.",
+          wcag_criteria: "4.1.2 Name, Role, Value (Level A)",
+        });
       }
     });
   }
 
-  function auditLinks(issues) {
+  function auditLinks(issues, features) {
     const links = querySelectorAllDeep("a[href]");
     const genericPhrases = new Set([
       "click here", "click", "here", "read more", "more", "learn more", "link", "view", "details", "continue"
@@ -491,13 +631,31 @@
       const ariaLabel = (a.getAttribute("aria-label") || "").trim().toLowerCase();
       const effectiveText = ariaLabel || text;
 
-      const id = getUniqueLanternId();
+      const id = a.getAttribute("data-lantern-id") || getUniqueLanternId();
       a.setAttribute("data-lantern-id", id);
+
+      // Check for Skip Link feature
+      const href = a.getAttribute("href") || "";
+      if (href.startsWith("#") && (text.includes("skip") || ariaLabel.includes("skip"))) {
+        features.push({
+          rule_id: "feature-skip-link",
+          category: "navigation",
+          wave_category: "features",
+          severity: "feature",
+          element_id: id,
+          element: getReadableSnippet(a),
+          selector: generateSelector(a),
+          message: `Skip navigation link found: "${a.innerText || href}"`,
+          how_to_fix: "Essential keyboard navigation feature for bypass blocks.",
+          wcag_criteria: "2.4.1 Bypass Blocks (Level A)",
+        });
+      }
 
       if (!effectiveText && !a.querySelector("img[alt]:not([alt='']), svg[aria-label]")) {
         issues.push({
           rule_id: "link-empty",
           category: "navigation",
+          wave_category: "errors",
           severity: "critical",
           element_id: id,
           element: getReadableSnippet(a),
@@ -510,6 +668,7 @@
         issues.push({
           rule_id: "link-generic-text",
           category: "navigation",
+          wave_category: "alerts",
           severity: "moderate",
           element_id: id,
           element: getReadableSnippet(a),
@@ -522,16 +681,16 @@
     });
   }
 
-  function auditContrast(issues) {
+  function auditContrastAndBuildItems(issues) {
     const candidates = querySelectorAllDeep(
       "p, span, h1, h2, h3, h4, h5, h6, a, button, label, li, td, th"
     );
 
     let contrastIssuesFound = 0;
     const maxContrastIssues = 30;
+    const contrastItems = [];
 
     for (let i = 0; i < candidates.length; i++) {
-      if (contrastIssuesFound >= maxContrastIssues) break;
       const el = candidates[i];
 
       const directText = Array.from(el.childNodes)
@@ -553,38 +712,71 @@
       const fontSizePx = parseFloat(style.fontSize);
       const fontWeight = parseInt(style.fontWeight, 10) || (style.fontWeight === "bold" ? 700 : 400);
       const isLarge = fontSizePx >= 24 || (fontSizePx >= 18.66 && fontWeight >= 700);
-      const requiredRatio = isLarge ? 3.0 : 4.5;
+      const requiredRatioAA = isLarge ? 3.0 : 4.5;
+      const requiredRatioAAA = isLarge ? 4.5 : 7.0;
 
-      if (ratio < requiredRatio) {
+      const passesAA = ratio >= requiredRatioAA;
+      const passesAAA = ratio >= requiredRatioAAA;
+
+      const id = el.getAttribute("data-lantern-id") || getUniqueLanternId();
+      el.setAttribute("data-lantern-id", id);
+
+      const fgHex = rgbToHex(effectiveFg);
+      const bgHex = rgbToHex(effectiveBg);
+
+      const suggested = calculateSuggestedColor(effectiveFg, effectiveBg, requiredRatioAA);
+
+      const item = {
+        element_id: id,
+        text: directText.slice(0, 60),
+        element: getReadableSnippet(el),
+        selector: generateSelector(el),
+        fg_hex: fgHex,
+        bg_hex: bgHex,
+        ratio: parseFloat(ratio.toFixed(2)),
+        ratio_formatted: `${ratio.toFixed(2)}:1`,
+        required_ratio: requiredRatioAA,
+        is_large: isLarge,
+        passes_aa: passesAA,
+        passes_aaa: passesAAA,
+        suggested_color: suggested.hex,
+        suggested_ratio: parseFloat(suggested.ratio.toFixed(2)),
+      };
+
+      if (!passesAA && contrastIssuesFound < maxContrastIssues) {
         contrastIssuesFound++;
-        const id = getUniqueLanternId();
-        el.setAttribute("data-lantern-id", id);
-
-        const fgHex = `rgb(${effectiveFg.r},${effectiveFg.g},${effectiveFg.b})`;
-        const bgHex = `rgb(${effectiveBg.r},${effectiveBg.g},${effectiveBg.b})`;
-
         issues.push({
           rule_id: "contrast-low",
           category: "contrast",
+          wave_category: "contrast_errors",
           severity: ratio < 2.5 ? "serious" : "moderate",
           element_id: id,
           element: getReadableSnippet(el),
           selector: generateSelector(el),
-          message: `Text contrast ratio is ${ratio.toFixed(2)}:1 (${fgHex} on ${bgHex}). Minimum required is ${requiredRatio}:1.`,
-          how_to_fix: `Adjust text color or background color to achieve at least ${requiredRatio}:1 contrast ratio.`,
+          message: `Text contrast ratio is ${ratio.toFixed(2)}:1 (${fgHex} on ${bgHex}). Minimum required is ${requiredRatioAA}:1.`,
+          how_to_fix: `Change text color to ${suggested.hex} (achieves ${suggested.ratio.toFixed(2)}:1) to satisfy WCAG AA.`,
           wcag_criteria: "1.4.3 Contrast (Minimum) (Level AA)",
         });
       }
+
+      if (contrastItems.length < 50) {
+        contrastItems.push(item);
+      }
     }
+
+    // Sort contrastItems so failing items appear first
+    contrastItems.sort((a, b) => (a.passes_aa === b.passes_aa ? a.ratio - b.ratio : a.passes_aa ? 1 : -1));
+    return contrastItems;
   }
 
-  function auditDocumentMeta(issues) {
+  function auditDocumentMeta(issues, features) {
     const html = document.documentElement;
     const lang = html.getAttribute("lang");
     if (!lang || !lang.trim()) {
       issues.push({
         rule_id: "doc-missing-lang",
         category: "general",
+        wave_category: "alerts",
         severity: "serious",
         element_id: null,
         element: "<html>",
@@ -593,12 +785,26 @@
         how_to_fix: 'Add a language tag to the html element, e.g. <html lang="en">.',
         wcag_criteria: "3.1.1 Language of Page (Level A)",
       });
+    } else {
+      features.push({
+        rule_id: "feature-page-lang",
+        category: "general",
+        wave_category: "features",
+        severity: "feature",
+        element_id: null,
+        element: `<html lang="${lang}">`,
+        selector: "html",
+        message: `Primary document language specified: lang="${lang}"`,
+        how_to_fix: "Maintained good practice for internationalization and screen readers.",
+        wcag_criteria: "3.1.1 Language of Page (Level A)",
+      });
     }
 
     if (!document.title || !document.title.trim()) {
       issues.push({
         rule_id: "doc-missing-title",
         category: "general",
+        wave_category: "errors",
         severity: "serious",
         element_id: null,
         element: "<title></title>",
@@ -616,16 +822,179 @@
         issues.push({
           rule_id: "viewport-zoom-disabled",
           category: "general",
+          wave_category: "errors",
           severity: "critical",
           element_id: null,
           element: getReadableSnippet(viewportMeta),
           selector: 'meta[name="viewport"]',
           message: "Viewport meta disables pinch-to-zoom (user-scalable=no). Visually impaired users cannot zoom in.",
-          how_to_fix: "Remove user-scalable=no constraints from <meta name=\"viewport\">.",
+          how_to_fix: 'Remove user-scalable=no constraints from <meta name="viewport">.',
           wcag_criteria: "1.4.4 Resize Text (Level AA)",
         });
       }
     }
+  }
+
+  // ── Tab 3: Reading & Keyboard Focus Order ────────────────────────
+  function buildFocusOrder(issues) {
+    const focusableSelector =
+      'a[href], area[href], button:not([disabled]), input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex], [contenteditable="true"], summary';
+    const elements = querySelectorAllDeep(focusableSelector);
+
+    const validElements = [];
+    elements.forEach((el, domIdx) => {
+      if (!isElementVisible(el)) return;
+
+      const rawTabindex = el.getAttribute("tabindex");
+      let tabindexNum = rawTabindex !== null ? parseInt(rawTabindex, 10) : 0;
+      if (isNaN(tabindexNum)) tabindexNum = 0;
+
+      // -1 means focusable programmatically, not via Tab key
+      if (tabindexNum < 0) return;
+
+      const id = el.getAttribute("data-lantern-id") || getUniqueLanternId();
+      el.setAttribute("data-lantern-id", id);
+
+      const isSuspicious = tabindexNum > 0;
+      if (isSuspicious) {
+        issues.push({
+          rule_id: "tabindex-positive",
+          category: "navigation",
+          wave_category: "alerts",
+          severity: "moderate",
+          element_id: id,
+          element: getReadableSnippet(el),
+          selector: generateSelector(el),
+          message: `Element has positive tabindex="${tabindexNum}". Positive tabindex disrupts the natural reading and keyboard navigation sequence.`,
+          how_to_fix: 'Change to tabindex="0" to keep element in natural DOM order, or remove tabindex if naturally focusable.',
+          wcag_criteria: "2.4.3 Focus Order (Level A)",
+        });
+      }
+
+      validElements.push({
+        dom_order: domIdx + 1,
+        tabindex: tabindexNum,
+        is_suspicious_tabindex: isSuspicious,
+        tag: el.tagName.toLowerCase(),
+        accessible_name: getAccessibleName(el) || "(unnamed interactive control)",
+        element_id: id,
+        selector: generateSelector(el),
+        element: getReadableSnippet(el),
+      });
+    });
+
+    // Sort order according to HTML specification for Sequential Focus Navigation:
+    // 1. Elements with tabindex > 0, ordered by tabindex value asc, then DOM order
+    // 2. Elements with tabindex = 0 or natural focus in DOM order
+    const positiveGroup = validElements
+      .filter((item) => item.tabindex > 0)
+      .sort((a, b) => (a.tabindex === b.tabindex ? a.dom_order - b.dom_order : a.tabindex - b.tabindex));
+
+    const standardGroup = validElements
+      .filter((item) => item.tabindex === 0)
+      .sort((a, b) => a.dom_order - b.dom_order);
+
+    const combined = [...positiveGroup, ...standardGroup].slice(0, 100);
+    combined.forEach((item, idx) => {
+      item.order = idx + 1;
+    });
+
+    return combined;
+  }
+
+  // ── Tab 4: Webpage Structure Tree (Headings & Landmarks) ──────────
+  function buildStructureTree() {
+    const selector =
+      "h1, h2, h3, h4, h5, h6, [role='heading'], header, [role='banner'], nav, [role='navigation'], main, [role='main'], footer, [role='contentinfo'], aside, [role='complementary'], section[aria-label]";
+    const nodes = querySelectorAllDeep(selector).filter(isElementVisible);
+
+    const tree = [];
+    let prevHeadingLevel = 0;
+
+    nodes.forEach((el) => {
+      const tag = el.tagName.toLowerCase();
+      const role = (el.getAttribute("role") || "").toLowerCase();
+      const id = el.getAttribute("data-lantern-id") || getUniqueLanternId();
+      el.setAttribute("data-lantern-id", id);
+
+      const isHeading = /^h[1-6]$/.test(tag) || role === "heading";
+      let level = null;
+      let type = "landmark";
+      let landmarkType = tag;
+
+      if (isHeading) {
+        type = "heading";
+        level = parseInt(tag.substring(1), 10);
+        if (isNaN(level) && el.getAttribute("aria-level")) {
+          level = parseInt(el.getAttribute("aria-level"), 10);
+        }
+        level = level || 1;
+      } else {
+        if (role) landmarkType = role;
+        else if (tag === "header") landmarkType = "banner";
+        else if (tag === "nav") landmarkType = "navigation";
+        else if (tag === "main") landmarkType = "main";
+        else if (tag === "footer") landmarkType = "contentinfo";
+        else if (tag === "aside") landmarkType = "complementary";
+      }
+
+      let skippedLevel = false;
+      if (type === "heading" && level && prevHeadingLevel > 0 && level > prevHeadingLevel + 1) {
+        skippedLevel = true;
+      }
+      if (type === "heading" && level) {
+        prevHeadingLevel = level;
+      }
+
+      const name = getAccessibleName(el) || el.getAttribute("aria-label") || landmarkType.toUpperCase();
+
+      tree.push({
+        type,
+        tag,
+        level,
+        landmark_type: landmarkType,
+        text: name.slice(0, 50),
+        skipped_level: skippedLevel,
+        element_id: id,
+        selector: generateSelector(el),
+        element: getReadableSnippet(el),
+      });
+    });
+
+    return tree;
+  }
+
+  // ── Extract ARIA Elements ─────────────────────────────────────────
+  function extractAriaElements() {
+    const ariaCandidates = querySelectorAllDeep(
+      "[role], [aria-label], [aria-labelledby], [aria-expanded], [aria-hidden], [aria-haspopup], [aria-live], [aria-controls]"
+    ).filter(isElementVisible);
+
+    const ariaList = [];
+    ariaCandidates.slice(0, 50).forEach((el) => {
+      const id = el.getAttribute("data-lantern-id") || getUniqueLanternId();
+      el.setAttribute("data-lantern-id", id);
+      const role = el.getAttribute("role") || "";
+      const label = el.getAttribute("aria-label") || "";
+      const live = el.getAttribute("aria-live") || "";
+      const expanded = el.getAttribute("aria-expanded") || "";
+
+      let desc = [];
+      if (role) desc.push(`role="${role}"`);
+      if (label) desc.push(`aria-label="${label.slice(0, 30)}"`);
+      if (live) desc.push(`aria-live="${live}"`);
+      if (expanded) desc.push(`aria-expanded="${expanded}"`);
+
+      ariaList.push({
+        element_id: id,
+        tag: el.tagName.toLowerCase(),
+        attributes: desc.join(", "),
+        element: getReadableSnippet(el),
+        selector: generateSelector(el),
+      });
+    });
+
+    return ariaList;
   }
 
   // ── Realistic Rule-Capped Health Scoring ────────────────────────
@@ -661,14 +1030,19 @@
   window.lanternRunAudit = function () {
     const startTime = performance.now();
     const issues = [];
+    const features = [];
 
-    auditDocumentMeta(issues);
-    auditImages(issues);
-    auditHeadings(issues);
-    auditForms(issues);
-    auditLinks(issues);
-    auditContrast(issues);
+    auditDocumentMeta(issues, features);
+    auditImages(issues, features);
+    auditHeadings(issues, features);
+    auditForms(issues, features);
+    auditLinks(issues, features);
+    const contrastItems = auditContrastAndBuildItems(issues);
+    const focusOrder = buildFocusOrder(issues);
+    const structureTree = buildStructureTree();
+    const ariaElements = extractAriaElements();
 
+    // Summary calculation
     const summary = { critical: 0, serious: 0, moderate: 0, minor: 0 };
     for (const issue of issues) {
       summary[issue.severity] = (summary[issue.severity] || 0) + 1;
@@ -676,6 +1050,20 @@
 
     const { score, grade } = calculateScore(issues);
     const durationMs = Math.round(performance.now() - startTime);
+
+    // Grouping for WAVE Details Tab
+    const detailsCategories = {
+      errors: issues.filter((i) => i.wave_category === "errors" || i.severity === "critical"),
+      contrast_errors: issues.filter((i) => i.wave_category === "contrast_errors" || i.category === "contrast"),
+      alerts: issues.filter(
+        (i) => (i.wave_category === "alerts" || i.severity === "serious" || i.severity === "moderate") &&
+               i.category !== "contrast" &&
+               i.severity !== "critical"
+      ),
+      features: features,
+      structure: structureTree,
+      aria: ariaElements,
+    };
 
     return {
       source: "live-dom",
@@ -688,6 +1076,12 @@
       duration_ms: durationMs,
       summary,
       issues,
+      features,
+      details_categories: detailsCategories,
+      focus_order: focusOrder,
+      structure_tree: structureTree,
+      contrast_items: contrastItems,
+      aria_elements: ariaElements,
       disclaimer:
         "⚠️ This automated scan checks essential WCAG 2.1 Level A/AA criteria on the live rendered DOM. It does NOT replace manual testing with screen readers (VoiceOver, NVDA) or keyboard-only navigation.",
     };

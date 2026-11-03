@@ -10,31 +10,40 @@
 
 .lantern-border-critical {
   outline-color: #dc2626 !important;
+  box-shadow: 0 0 0 2px #fecaca, 0 0 10px rgba(220, 38, 38, 0.45) !important;
 }
 .lantern-border-serious {
   outline-color: #ea580c !important;
+  box-shadow: 0 0 0 2px #fed7aa, 0 0 10px rgba(234, 88, 12, 0.45) !important;
 }
 .lantern-border-moderate {
   outline-color: #ca8a04 !important;
+  box-shadow: 0 0 0 2px #fef08a, 0 0 10px rgba(202, 138, 4, 0.45) !important;
 }
 .lantern-border-minor {
   outline-color: #475569 !important;
+  box-shadow: 0 0 0 2px #e2e8f0, 0 0 8px rgba(71, 85, 105, 0.35) !important;
+}
+.lantern-border-feature {
+  outline-color: #16a34a !important;
+  box-shadow: 0 0 0 2px #dcfce7, 0 0 10px rgba(22, 163, 74, 0.45) !important;
 }
 
 .lantern-suppress-outline {
   outline: none !important;
+  box-shadow: none !important;
 }
 
-/* Pulsing halo when user clicks an issue in the popup */
+/* Pulsing halo when user clicks an issue or inspects */
 @keyframes lanternPulseGlow {
   0% {
-    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
+    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.85) !important;
   }
   50% {
-    box-shadow: 0 0 0 16px rgba(220, 38, 38, 0);
+    box-shadow: 0 0 0 18px rgba(249, 115, 22, 0) !important;
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0) !important;
   }
 }
 
@@ -50,7 +59,7 @@
   font-size: 11px !important;
   font-weight: 700 !important;
   line-height: 1 !important;
-  padding: 3px 7px !important;
+  padding: 3px 8px !important;
   border-radius: 4px !important;
   color: #ffffff !important;
   border: 1px solid rgba(255, 255, 255, 0.4) !important;
@@ -59,6 +68,9 @@
   user-select: none !important;
   pointer-events: auto !important;
   transition: transform 0.15s ease, filter 0.15s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
 }
 
 .lantern-injected-badge:hover {
@@ -78,12 +90,56 @@
 .lantern-bg-minor {
   background-color: #475569 !important;
 }
+.lantern-bg-feature {
+  background-color: #16a34a !important;
+}
+
+/* Tab 3: Numbered Order Badge Pins */
+.lantern-order-badge {
+  position: absolute !important;
+  z-index: 2147483642 !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  line-height: 18px !important;
+  min-width: 22px !important;
+  height: 22px !important;
+  padding: 0 4px !important;
+  border-radius: 11px !important;
+  color: #ffffff !important;
+  background: #1e3a8a !important;
+  border: 2px solid #ffffff !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  pointer-events: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: transform 0.15s ease, background-color 0.15s ease !important;
+}
+
+.lantern-order-badge:hover {
+  transform: scale(1.2) !important;
+  background: #f97316 !important;
+}
+
+.lantern-order-badge.suspicious {
+  background: #ea580c !important;
+  border-color: #fef08a !important;
+}
+
+.lantern-order-badge.active {
+  background: #f97316 !important;
+  transform: scale(1.25) !important;
+  box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.4) !important;
+}
 
 /* Interactive Floating Tooltip Card */
 .lantern-interactive-tooltip {
   position: absolute !important;
   z-index: 2147483647 !important;
-  width: 320px !important;
+  width: 340px !important;
   background: #ffffff !important;
   color: #1e293b !important;
   border-radius: 8px !important;
@@ -148,8 +204,10 @@
 
 .lantern-tooltip-body {
   padding: 12px !important;
-  font-size: 13px !important;
+  font-size: 12.5px !important;
   line-height: 1.45 !important;
+  max-height: 380px !important;
+  overflow-y: auto !important;
 }
 
 .lantern-msg {
@@ -158,10 +216,24 @@
   margin: 0 0 8px 0 !important;
 }
 
+.lantern-code-preview {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+  padding: 6px 8px !important;
+  border-radius: 4px !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  font-size: 11px !important;
+  overflow-x: auto !important;
+  white-space: pre-wrap !important;
+  word-break: break-all !important;
+  margin-bottom: 8px !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
 .lantern-fix-box {
   background: #f8fafc !important;
   border: 1px solid #e2e8f0 !important;
-  border-left: 3px solid #2563eb !important;
+  border-left: 3px solid #f97316 !important;
   border-radius: 4px !important;
   padding: 8px !important;
   margin-bottom: 8px !important;
@@ -170,13 +242,38 @@
 .lantern-fix-title {
   font-size: 11px !important;
   font-weight: 700 !important;
-  color: #1e40af !important;
+  color: #ea580c !important;
   margin-bottom: 3px !important;
 }
 
 .lantern-fix-text {
   font-size: 12px !important;
   color: #334155 !important;
+}
+
+.lantern-tooltip-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  margin-top: 6px !important;
+}
+
+.lantern-copy-btn {
+  background: #f1f5f9 !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #1e293b !important;
+  padding: 4px 8px !important;
+  border-radius: 4px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+.lantern-copy-btn:hover {
+  background: #e2e8f0 !important;
 }
 
 .lantern-wcag-ref {

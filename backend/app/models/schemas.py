@@ -98,6 +98,10 @@ class ScanResponse(BaseModel):
         description="Count of issues per severity: {'critical': 2, 'serious': 1, …}",
     )
     issues: list[Issue]
+    details_categories: Optional[dict] = None
+    focus_order: Optional[list] = None
+    structure_tree: Optional[list] = None
+    contrast_items: Optional[list] = None
     disclaimer: str = Field(
         default=(
             "⚠️ This automated scan checks a limited set of accessibility rules. "

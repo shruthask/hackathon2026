@@ -17,12 +17,13 @@ export default function Hero({ onSelectSample }) {
           />
         </div>
 
-        {/* Short, Punchy Title Matching Exact Logo Font Color (#F28C28) */}
-        <h1 
-          className="text-3xl sm:text-5xl font-black tracking-tight leading-tight"
-          style={{ color: '#F28C28' }}
-        >
-          Shine a light on web accessibility
+        {/* Exact Title: Make the Web Accessible to Everyone. */}
+        <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.08] text-slate-950">
+          Make the Web{' '}
+          <span style={{ color: '#F28C28' }}>Accessible</span>
+          <span className="block" style={{ color: '#F28C28' }}>
+            to Everyone.
+          </span>
         </h1>
 
         {/* Clean, Focused Subtitle */}

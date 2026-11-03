@@ -14,7 +14,17 @@
     </div>
     <div class="header-actions">
       <span id="site-badge" class="site-badge" title="Active Tab Host">detecting…</span>
-      <button id="reset-view-btn" class="icon-btn hidden" title="Start screen & privacy settings">
+
+      <!-- Styles ON/OFF Toggle Switch -->
+      <div class="styles-toggle-wrapper" title="Toggle webpage CSS styles without affecting Lantern overlays">
+        <label class="switch-control">
+          <input type="checkbox" id="styles-toggle" checked />
+          <span class="switch-slider"></span>
+        </label>
+        <span id="styles-toggle-label" class="styles-toggle-text">Styles ON</span>
+      </div>
+
+      <button id="reset-view-btn" class="icon-btn hidden" title="Start screen">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       </button>
       <button id="rescan-btn" class="icon-btn hidden" title="Re-scan current page">
@@ -23,7 +33,7 @@
     </div>
   </header>
 
-  <!-- Initial / Start Scan State with Privacy Consent -->
+  <!-- Initial / Start Scan State -->
   <div id="initial-state" class="start-screen">
     <div class="emblem-wrapper">
       <img src="../icons/emblem.png" alt="Lantern Emblem" class="welcome-emblem" />
@@ -78,7 +88,7 @@
 
   <!-- Results Dashboard -->
   <main id="results-dashboard" class="hidden">
-    <!-- Score Hero -->
+    <!-- Score Hero Summary -->
     <section class="score-hero">
       <div class="score-dial">
         <div id="score-grade" class="grade-badge grade-b">B</div>
@@ -89,7 +99,7 @@
       </div>
       <div class="score-details">
         <h3 id="score-title" class="score-title">Good Accessibility</h3>
-        <p id="stats-summary" class="stats-text">Found 6 issues on this page</p>
+        <p id="stats-summary" class="stats-text">Found 6 issue(s) on this page</p>
         <div class="meta-row">
           <span id="audit-duration" class="meta-tag">
             <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px; vertical-align:-1px;"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
@@ -100,55 +110,176 @@
       </div>
     </section>
 
-    <!-- Severity Filter Pills -->
+    <!-- Severity Counts Row -->
     <section class="severity-bar">
-      <button class="sev-pill critical active" data-filter="critical" title="Toggle Critical Issues">
+      <div class="sev-pill critical" title="Critical Issues">
         <span id="count-critical" class="pill-count">0</span> Critical
-      </button>
-      <button class="sev-pill serious active" data-filter="serious" title="Toggle Serious Issues">
+      </div>
+      <div class="sev-pill serious" title="Serious Issues">
         <span id="count-serious" class="pill-count">0</span> Serious
-      </button>
-      <button class="sev-pill moderate active" data-filter="moderate" title="Toggle Moderate Issues">
+      </div>
+      <div class="sev-pill moderate" title="Moderate Issues">
         <span id="count-moderate" class="pill-count">0</span> Moderate
-      </button>
-      <button class="sev-pill minor active" data-filter="minor" title="Toggle Minor Issues">
+      </div>
+      <div class="sev-pill minor" title="Minor Issues">
         <span id="count-minor" class="pill-count">0</span> Minor
-      </button>
+      </div>
     </section>
 
-    <!-- Category Tabs -->
-    <nav class="category-tabs">
-      <button class="cat-tab active" data-cat="all">All</button>
-      <button class="cat-tab" data-cat="images">Images</button>
-      <button class="cat-tab" data-cat="forms">Forms</button>
-      <button class="cat-tab" data-cat="headings">Headings</button>
-      <button class="cat-tab" data-cat="contrast">Contrast</button>
-      <button class="cat-tab" data-cat="navigation">Navigation</button>
+    <!-- WAVE 5 Navigation Tabs -->
+    <nav class="wave-tabs">
+      <button class="wave-tab active" data-tab="details">
+        <span class="tab-icon">📋</span>
+        <span class="tab-label">Details</span>
+      </button>
+      <button class="wave-tab" data-tab="reference">
+        <span class="tab-icon">📖</span>
+        <span class="tab-label">Reference</span>
+      </button>
+      <button class="wave-tab" data-tab="order">
+        <span class="tab-icon">🔢</span>
+        <span class="tab-label">Order</span>
+      </button>
+      <button class="wave-tab" data-tab="structure">
+        <span class="tab-icon">🏛️</span>
+        <span class="tab-label">Structure</span>
+      </button>
+      <button class="wave-tab" data-tab="contrast">
+        <span class="tab-icon">🎨</span>
+        <span class="tab-label">Contrast</span>
+      </button>
     </nav>
 
-    <!-- Search & Toolbar -->
-    <div class="filter-toolbar">
-      <div class="search-box">
-        <input type="text" id="search-input" placeholder="Search rules, messages, or tags…" />
-      </div>
-      <div class="toolbar-actions">
-        <button id="toggle-highlights-btn" class="tool-btn active" title="Toggle In-Page Outlines">
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-          <span class="btn-label">Outlines</span>
+    <!-- ══════════════ TAB 1: DETAILS ══════════════ -->
+    <section id="tab-content-details" class="tab-pane active">
+      <!-- 6 WAVE Categories Summary Cards -->
+      <div class="wave-category-cards">
+        <button class="wave-cat-card active" data-cat="all">
+          <div class="wave-cat-icon">📑</div>
+          <div class="wave-cat-info">
+            <span class="wave-cat-title">All</span>
+            <span id="count-all-issues" class="wave-cat-badge badge-neutral">0</span>
+          </div>
         </button>
-        <button id="export-csv-btn" class="tool-btn" title="Export as CSV Report">
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          <span>CSV</span>
+        <button class="wave-cat-card" data-cat="errors">
+          <div class="wave-cat-icon icon-error">🔴</div>
+          <div class="wave-cat-info">
+            <span class="wave-cat-title">Errors</span>
+            <span id="count-cat-errors" class="wave-cat-badge badge-red">0</span>
+          </div>
+        </button>
+        <button class="wave-cat-card" data-cat="contrast_errors">
+          <div class="wave-cat-icon icon-contrast">🎨</div>
+          <div class="wave-cat-info">
+            <span class="wave-cat-title">Contrast</span>
+            <span id="count-cat-contrast" class="wave-cat-badge badge-amber">0</span>
+          </div>
+        </button>
+        <button class="wave-cat-card" data-cat="alerts">
+          <div class="wave-cat-icon icon-alert">⚠️</div>
+          <div class="wave-cat-info">
+            <span class="wave-cat-title">Alerts</span>
+            <span id="count-cat-alerts" class="wave-cat-badge badge-yellow">0</span>
+          </div>
+        </button>
+        <button class="wave-cat-card" data-cat="features">
+          <div class="wave-cat-icon icon-feature">🟢</div>
+          <div class="wave-cat-info">
+            <span class="wave-cat-title">Features</span>
+            <span id="count-cat-features" class="wave-cat-badge badge-green">0</span>
+          </div>
+        </button>
+        <button class="wave-cat-card" data-cat="structure">
+          <div class="wave-cat-icon icon-struct">🏛️</div>
+          <div class="wave-cat-info">
+            <span class="wave-cat-title">Structure</span>
+            <span id="count-cat-structure" class="wave-cat-badge badge-blue">0</span>
+          </div>
+        </button>
+        <button class="wave-cat-card" data-cat="aria">
+          <div class="wave-cat-icon icon-aria">🧩</div>
+          <div class="wave-cat-info">
+            <span class="wave-cat-title">ARIA</span>
+            <span id="count-cat-aria" class="wave-cat-badge badge-purple">0</span>
+          </div>
         </button>
       </div>
-    </div>
 
-    <!-- Issues List Container -->
-    <section class="issues-container">
-      <div id="empty-filter-msg" class="empty-state hidden">
-        No issues match your current filters.
+      <!-- Filter & Action Toolbar -->
+      <div class="filter-toolbar">
+        <div class="search-box">
+          <input type="text" id="details-search-input" placeholder="Search issues, rules, or elements…" />
+        </div>
+        <div class="toolbar-actions">
+          <button id="toggle-highlights-btn" class="tool-btn active" title="Toggle in-page overlays and badges">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span class="btn-label">Outlines</span>
+          </button>
+          <button id="export-csv-btn" class="tool-btn" title="Export as comprehensive CSV Report">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span>CSV</span>
+          </button>
+        </div>
       </div>
-      <ul id="issue-list" class="issue-list"></ul>
+
+      <!-- Items List -->
+      <div class="issues-container">
+        <div id="empty-filter-msg" class="empty-state hidden">No items found in this category.</div>
+        <ul id="details-item-list" class="details-item-list"></ul>
+      </div>
+    </section>
+
+    <!-- ══════════════ TAB 2: REFERENCE ══════════════ -->
+    <section id="tab-content-reference" class="tab-pane hidden">
+      <div class="reference-header">
+        <input type="text" id="reference-search-input" placeholder="Search accessibility rules (e.g. alt, contrast, heading)…" />
+      </div>
+      <div id="reference-rule-list" class="reference-rule-list">
+        <!-- Rendered dynamically from rule encyclopedia -->
+      </div>
+    </section>
+
+    <!-- ══════════════ TAB 3: ORDER ══════════════ -->
+    <section id="tab-content-order" class="tab-pane hidden">
+      <div class="order-toolbar">
+        <div class="order-stepper">
+          <button id="order-prev-btn" class="stepper-btn" title="Go to previous interactive element">&larr; Prev</button>
+          <span id="order-current-step" class="stepper-counter">Item 0 of 0</span>
+          <button id="order-next-btn" class="stepper-btn" title="Go to next interactive element">Next &rarr;</button>
+        </div>
+        <button id="order-toggle-badges-btn" class="tool-btn active" title="Show order numbers on page">
+          <span id="order-toggle-label">Pins: ON</span>
+        </button>
+      </div>
+
+      <div id="order-suspicious-alert" class="order-alert hidden">
+        <strong>⚠️ Positive Tabindex Detected:</strong> <span id="order-suspicious-count">0</span> element(s) disrupt natural keyboard order.
+      </div>
+
+      <div class="order-list-container">
+        <div class="order-list-heading">Sequential Keyboard Navigation Order</div>
+        <ul id="order-item-list" class="order-item-list"></ul>
+      </div>
+    </section>
+
+    <!-- ══════════════ TAB 4: STRUCTURE ══════════════ -->
+    <section id="tab-content-structure" class="tab-pane hidden">
+      <div class="structure-info-banner">
+        Interactive document outline tree (H1–H6 headings and semantic ARIA landmarks). Click any node to scroll into view and highlight.
+      </div>
+      <div id="structure-tree-container" class="structure-tree-container">
+        <!-- Collapsible Tree rendered here -->
+      </div>
+    </section>
+
+    <!-- ══════════════ TAB 5: CONTRAST ══════════════ -->
+    <section id="tab-content-contrast" class="tab-pane hidden">
+      <div class="contrast-summary-banner">
+        Analyzes foreground & background luminance against WCAG 2.1 AA (4.5:1 / 3:1) and AAA (7:1 / 4.5:1) standards with algorithmic color correction suggestions.
+      </div>
+      <div id="contrast-items-container" class="contrast-items-container">
+        <!-- Contrast items list rendered here -->
+      </div>
     </section>
 
     <!-- Manual Testing & Disclaimer Accordion -->
@@ -156,16 +287,16 @@
       <details class="guidance-accordion">
         <summary>
           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px; vertical-align:-1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          WCAG Disclaimer & Manual Testing Guide
+          WCAG Testing Guide & Screen Reader Reference
         </summary>
         <div class="guidance-content">
           <p class="disclaimer-note">
-            Automated tools catch only a subset of accessibility barriers. Essential manual checks:
+            Automated tools catch only a subset of accessibility barriers. Recommended manual checks:
           </p>
           <ul class="manual-checklist">
             <li><strong>Keyboard Tab Test:</strong> Press <kbd>Tab</kbd> to ensure all interactive elements receive visible focus and are operable without a mouse.</li>
             <li><strong>Screen Reader:</strong> Test with VoiceOver (<kbd>Cmd + F5</kbd> on macOS) or NVDA on Windows.</li>
-            <li><strong>200% Zoom:</strong> Zoom browser to 200% to ensure layout reflows without overlapping content.</li>
+            <li><strong>200% Zoom:</strong> Zoom browser to 200% to ensure layout reflows without horizontal scroll or overlapping content.</li>
           </ul>
         </div>
       </details>

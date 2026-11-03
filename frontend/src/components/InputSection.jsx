@@ -162,9 +162,9 @@ export default function InputSection({
                 </label>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-slate-400 font-mono">
-                    {inputCode.length.toLocaleString()} characters
+                    {(inputCode || '').length.toLocaleString()} characters
                   </span>
-                  {inputCode && (
+                  {Boolean(inputCode) && (
                     <button
                       type="button"
                       onClick={() => { setInputCode(''); setSelectedSampleId(null); }}
@@ -212,7 +212,7 @@ export default function InputSection({
               <div className="mt-4 flex items-center justify-end">
                 <button
                   type="submit"
-                  disabled={isLoading || !inputCode.trim()}
+                  disabled={isLoading || !(inputCode || '').trim()}
                   className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:bg-slate-300 text-white font-bold text-sm shadow-md shadow-amber-600/20 disabled:shadow-none transition-all cursor-pointer disabled:cursor-not-allowed"
                 >
                   {isLoading ? (

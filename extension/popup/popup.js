@@ -1,50 +1,221 @@
 /**
- * Lantern – Popup Controller
+ * Lantern – Advanced Accessibility Evaluation Controller (WAVE-Inspired)
  *
- * Manages Start Scan Screen with Privacy Consent, Interactive Filters,
- * In-Page Inspector Navigation, and CSV Report Export.
+ * Manages:
+ * - 5 WAVE Tabs: Details, Reference, Order, Structure, Contrast
+ * - Dynamic Domain detection & Styles ON/OFF Toggle
+ * - Interactive In-Page Highlighting & Order Pins
+ * - Rule Reference Encyclopedia with Bad vs Good HTML snippets
+ * - Automated Contrast Color Corrections & CSV Export
  */
 
 let currentReport = null;
 let activeTabId = null;
 let currentHostname = "current page";
-let currentCategory = "all";
-let activeSeverities = new Set(["critical", "serious", "moderate", "minor"]);
-let searchKeyword = "";
+let currentWaveTab = "details";
+let currentDetailsCategory = "all";
+let detailsSearchKeyword = "";
+let referenceSearchKeyword = "";
 let areHighlightsVisible = true;
+let areOrderPinsVisible = true;
+let currentOrderIndex = 0;
 
-// DOM Elements
-const initialStateEl = document.getElementById("initial-state");
-const loadingStateEl = document.getElementById("loading-state");
-const loadingStepMsgEl = document.getElementById("loading-step-msg");
-const resultsDashboardEl = document.getElementById("results-dashboard");
+// ── WCAG Reference Rulebook Encyclopedia ────────────────────────────
+const RULE_ENCYCLOPEDIA = [
+  {
+    id: "img-alt-missing",
+    name: "Missing Alternative Text on Image",
+    wcag: "1.1.1 Non-text Content (Level A)",
+    problem: "The <img> element has no `alt` attribute.",
+    why: "Screen reader users cannot perceive images without alternative text. The screen reader may read out the raw file URL instead, which is confusing and unhelpful.",
+    impact: "Blind and low-vision users cannot understand the meaning, function, or context of visual content on the page.",
+    fix: 'Add a descriptive alt attribute, e.g. alt="Company founder giving keynote speech". If the image is purely decorative, specify alt="".',
+    badHtml: '<img src="/assets/hero-banner.jpg">',
+    goodHtml: '<img src="/assets/hero-banner.jpg" alt="Team collaborating in a modern office space">',
+  },
+  {
+    id: "img-alt-empty-link",
+    name: "Empty Image Alt in Standalone Link",
+    wcag: "1.1.1 Non-text Content / 2.4.4 Link Purpose (Level A)",
+    problem: 'An image inside a link has alt="" but no accompanying link text.',
+    why: "Because alt is empty, screen readers treat the image as decorative. But since there is no other text inside the <a>, the entire link has no accessible name.",
+    impact: "Screen reader users encounter an unnamed link and cannot know where it leads without clicking it blindly.",
+    fix: 'Provide descriptive alt text that explains the destination of the link, e.g. alt="Go to Homepage".',
+    badHtml: '<a href="/home"><img src="logo.png" alt=""></a>',
+    goodHtml: '<a href="/home"><img src="logo.png" alt="Lantern Homepage"></a>',
+  },
+  {
+    id: "img-alt-uninformative",
+    name: "Uninformative or Placeholder Alt Text",
+    wcag: "1.1.1 Non-text Content (Level A)",
+    problem: 'Image alt text contains generic words like "image", "photo", "icon", or just a file name.',
+    why: "Screen readers already announce that an element is a graphic or image. Repeating words like 'photo of' or 'banner.png' adds noise without conveying information.",
+    impact: "Users are forced to listen to redundant and useless text rather than understanding what the image depicts.",
+    fix: "Replace placeholder words with specific descriptive information about the subject and purpose of the visual.",
+    badHtml: '<img src="chart.png" alt="graphic.png">',
+    goodHtml: '<img src="chart.png" alt="Bar chart showing 35% increase in user retention in Q3">',
+  },
+  {
+    id: "form-label-missing",
+    name: "Missing Accessible Form Label",
+    wcag: "1.3.1 Info and Relationships / 3.3.2 Labels or Instructions (Level A)",
+    problem: "A form control (<input>, <select>, <textarea>) is not associated with an accessible label.",
+    why: "Assistive technologies cannot announce the purpose of an input field unless it is linked to a visible <label> or has an ARIA label.",
+    impact: "Blind users navigating form fields using Tab will only hear 'edit text' or 'input' with no clue what information to enter.",
+    fix: 'Use a <label for="field-id"> with matching id, wrap the control in a <label>, or provide aria-label="Label".',
+    badHtml: '<input type="text" id="email">',
+    goodHtml: '<label for="email">Email Address</label>\n<input type="email" id="email">',
+  },
+  {
+    id: "form-label-placeholder-only",
+    name: "Placeholder Used as Sole Label",
+    wcag: "3.3.2 Labels or Instructions (Level A)",
+    problem: "A form input relies exclusively on the placeholder attribute instead of a permanent label.",
+    why: "Placeholders disappear as soon as the user starts typing, making it difficult for users to review their inputs. Placeholders also commonly fail color contrast standards.",
+    impact: "Users with cognitive impairments or memory limitations lose context while typing.",
+    fix: "Provide a persistent visible <label> above or beside the input field in addition to or instead of the placeholder.",
+    badHtml: '<input type="text" placeholder="Enter your full name">',
+    goodHtml: '<label for="fullname">Full Name</label>\n<input type="text" id="fullname" placeholder="e.g. Jane Doe">',
+  },
+  {
+    id: "button-missing-accessible-name",
+    name: "Button Without Accessible Name",
+    wcag: "4.1.2 Name, Role, Value (Level A)",
+    problem: "A button element contains no readable text, accessible label, or icon alt description.",
+    why: "Icon-only buttons (such as search magnifying glasses or hamburger menu bars) have no default text content.",
+    impact: "Screen reader users hear 'button' with no indication of what clicking it will do.",
+    fix: 'Add visible text, an aria-label="Action description", or alt text to the icon SVG/image.',
+    badHtml: '<button class="btn-search"><svg>...</svg></button>',
+    goodHtml: '<button class="btn-search" aria-label="Search site">\n  <svg aria-hidden="true">...</svg>\n</button>',
+  },
+  {
+    id: "link-empty",
+    name: "Empty Link Without Text",
+    wcag: "2.4.4 Link Purpose (In Context) (Level A)",
+    problem: "An anchor <a> has an href attribute but no discernible text or accessible label.",
+    why: "Links must convey their purpose so users can decide whether to follow them.",
+    impact: "Assistive technologies announce 'link' or read raw URLs, leaving users stranded.",
+    fix: 'Include descriptive text inside the link or add an aria-label="Destination description".',
+    badHtml: '<a href="/settings"><span class="gear-icon"></span></a>',
+    goodHtml: '<a href="/settings" aria-label="Account Settings">\n  <span class="gear-icon" aria-hidden="true"></span>\n</a>',
+  },
+  {
+    id: "link-generic-text",
+    name: "Generic or Ambiguous Link Text",
+    wcag: "2.4.4 Link Purpose (In Context) (Level A)",
+    problem: 'Link uses generic text such as "click here", "read more", "link", or "details".',
+    why: "Screen reader users often browse pages by listening to a list of all links out of context.",
+    impact: "Hearing twenty links that all say 'click here' makes navigation frustrating and impossible.",
+    fix: 'Specify the specific topic in the link text or provide aria-label="Read more about our Q3 report".',
+    badHtml: '<p>Learn about our pricing. <a href="/pricing">Click here</a></p>',
+    goodHtml: '<p>Learn about our <a href="/pricing">pricing plans and options</a>.</p>',
+  },
+  {
+    id: "contrast-low",
+    name: "Low Text Color Contrast",
+    wcag: "1.4.3 Contrast (Minimum) (Level AA)",
+    problem: "The contrast ratio between text foreground and its background is below the required 4.5:1 ratio (or 3:1 for large text).",
+    why: "Sufficient visual contrast is vital for text readability across various lighting conditions and visual abilities.",
+    impact: "Users with low vision, color blindness, or aging vision cannot comfortably read low-contrast text.",
+    fix: "Darken the text color on light backgrounds or lighten the text color on dark backgrounds.",
+    badHtml: '<!-- Contrast: 2.1:1 -->\n<p style="color: #94a3b8; background: #ffffff;">Light grey text</p>',
+    goodHtml: '<!-- Contrast: 4.6:1 -->\n<p style="color: #475569; background: #ffffff;">Dark slate text</p>',
+  },
+  {
+    id: "heading-missing-h1",
+    name: "Missing Level 1 Heading (H1)",
+    wcag: "1.3.1 Info and Relationships (Level A)",
+    problem: "The webpage does not have an <h1> heading.",
+    why: "The <h1> serves as the primary landmark identifying the topic of the entire webpage.",
+    impact: "Screen reader users cannot quickly verify they have navigated to the correct page or understand its main theme.",
+    fix: "Add a meaningful <h1> heading at the start of the main content region.",
+    badHtml: '<div class="banner"><h3>Welcome to Store</h3></div>',
+    goodHtml: '<main>\n  <h1>Online Bakery Store</h1>\n  <h2>Fresh Pastries Today</h2>\n</main>',
+  },
+  {
+    id: "heading-order-skip",
+    name: "Skipped Heading Level",
+    wcag: "1.3.1 Info and Relationships (Level A)",
+    problem: "A heading level jumped (e.g. from <h1> directly to <h3>, skipping <h2>).",
+    why: "Headings form an outline structure. Skipping levels confuses screen reader navigation hierarchies.",
+    impact: "Users may assume they missed an entire section of content.",
+    fix: "Adjust heading tags so levels increase incrementally by one level at a time (H1 -> H2 -> H3).",
+    badHtml: '<h1>Account Profile</h1>\n<h3>Personal Details</h3> <!-- Skipped H2 -->',
+    goodHtml: '<h1>Account Profile</h1>\n<h2>Personal Details</h2>',
+  },
+  {
+    id: "tabindex-positive",
+    name: "Positive Tabindex Value",
+    wcag: "2.4.3 Focus Order (Level A)",
+    problem: 'An element has a positive tabindex attribute (e.g. tabindex="1" or "2").',
+    why: "Positive tabindex values override natural document flow, causing focus to jump unpredictably across the page.",
+    impact: "Keyboard users experience disorienting focus jumps that do not match the visual reading order.",
+    fix: 'Use tabindex="0" to insert custom elements into natural document tab flow, or remove tabindex if element is naturally focusable.',
+    badHtml: '<button tabindex="3">Submit</button>\n<input tabindex="1" name="first_name">',
+    goodHtml: '<input name="first_name">\n<button type="submit">Submit</button>',
+  },
+  {
+    id: "doc-missing-lang",
+    name: "Missing Document Language Attribute",
+    wcag: "3.1.1 Language of Page (Level A)",
+    problem: "The <html> element does not have a `lang` attribute.",
+    why: "Screen readers use the language tag to load the correct speech synthesizer pronunciation rules.",
+    impact: "Content may be pronounced using the wrong language phonetics, making text unintelligible.",
+    fix: 'Add the primary language code to the root HTML element, e.g. <html lang="en">.',
+    badHtml: '<html>\n  <head>...',
+    goodHtml: '<html lang="en">\n  <head>...',
+  },
+  {
+    id: "viewport-zoom-disabled",
+    name: "Pinch to Zoom Disabled in Viewport",
+    wcag: "1.4.4 Resize Text (Level AA)",
+    problem: 'The <meta name="viewport"> tag includes user-scalable=no or maximum-scale=1.',
+    why: "Users with visual impairments must be able to zoom into text up to 200% on mobile and touchscreen devices.",
+    impact: "Low-vision users cannot enlarge small text or interactive elements.",
+    fix: 'Remove user-scalable=no and maximum-scale constraints from <meta name="viewport">.',
+    badHtml: '<meta name="viewport" content="width=device-width, user-scalable=no">',
+    goodHtml: '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
+  },
+];
 
-const siteBadgeEl = document.getElementById("site-badge");
-const welcomeSiteNameEl = document.getElementById("welcome-site-name");
-const startScanBtn = document.getElementById("start-scan-btn");
-const rescanBtn = document.getElementById("rescan-btn");
-const resetViewBtn = document.getElementById("reset-view-btn");
+// ── DOM References ──────────────────────────────────────────────────
+let siteBadgeEl, welcomeSiteNameEl, startScanBtn, rescanBtn, resetViewBtn;
+let stylesToggle, stylesToggleLabel;
+let initialStateEl, loadingStateEl, loadingStepMsgEl, resultsDashboardEl;
+let scoreValEl, scoreGradeEl, scoreTitleEl, statsSummaryEl;
+let countCriticalEl, countSeriousEl, countModerateEl, countMinorEl;
+let toggleHighlightsBtn, exportCsvBtn, detailsSearchInput;
 
-const toggleHighlightsBtn = document.getElementById("toggle-highlights-btn");
-const exportCsvBtn = document.getElementById("export-csv-btn");
-const searchInput = document.getElementById("search-input");
-
-const scoreValEl = document.getElementById("score-val");
-const scoreGradeEl = document.getElementById("score-grade");
-const scoreTitleEl = document.getElementById("score-title");
-const statsSummaryEl = document.getElementById("stats-summary");
-const auditDurationEl = document.getElementById("audit-duration");
-
-const countCriticalEl = document.getElementById("count-critical");
-const countSeriousEl = document.getElementById("count-serious");
-const countModerateEl = document.getElementById("count-moderate");
-const countMinorEl = document.getElementById("count-minor");
-
-const issueListEl = document.getElementById("issue-list");
-const emptyFilterMsgEl = document.getElementById("empty-filter-msg");
-
-// ── Initialization ──────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", async () => {
+  // Grab DOM elements
+  siteBadgeEl = document.getElementById("site-badge");
+  welcomeSiteNameEl = document.getElementById("welcome-site-name");
+  startScanBtn = document.getElementById("start-scan-btn");
+  rescanBtn = document.getElementById("rescan-btn");
+  resetViewBtn = document.getElementById("reset-view-btn");
+  stylesToggle = document.getElementById("styles-toggle");
+  stylesToggleLabel = document.getElementById("styles-toggle-label");
+
+  initialStateEl = document.getElementById("initial-state");
+  loadingStateEl = document.getElementById("loading-state");
+  loadingStepMsgEl = document.getElementById("loading-step-msg");
+  resultsDashboardEl = document.getElementById("results-dashboard");
+
+  scoreValEl = document.getElementById("score-val");
+  scoreGradeEl = document.getElementById("score-grade");
+  scoreTitleEl = document.getElementById("score-title");
+  statsSummaryEl = document.getElementById("stats-summary");
+
+  countCriticalEl = document.getElementById("count-critical");
+  countSeriousEl = document.getElementById("count-serious");
+  countModerateEl = document.getElementById("count-moderate");
+  countMinorEl = document.getElementById("count-minor");
+
+  toggleHighlightsBtn = document.getElementById("toggle-highlights-btn");
+  exportCsvBtn = document.getElementById("export-csv-btn");
+  detailsSearchInput = document.getElementById("details-search-input");
+
+  // Determine active tab URL
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (tab) {
     activeTabId = tab.id;
@@ -59,11 +230,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   siteBadgeEl.textContent = currentHostname;
   welcomeSiteNameEl.textContent = currentHostname;
 
-  // Start & Rescan buttons
+  // Scan triggers
   startScanBtn.addEventListener("click", triggerScan);
   rescanBtn.addEventListener("click", triggerScan);
 
-  // Return to Start Screen / Privacy Settings
+  // Return to start screen
   resetViewBtn.addEventListener("click", () => {
     resultsDashboardEl.classList.add("hidden");
     loadingStateEl.classList.add("hidden");
@@ -72,40 +243,55 @@ document.addEventListener("DOMContentLoaded", async () => {
     resetViewBtn.classList.add("hidden");
   });
 
-  // Severity Pills click
-  document.querySelectorAll(".sev-pill").forEach((pill) => {
-    pill.addEventListener("click", () => {
-      const sev = pill.getAttribute("data-filter");
-      if (activeSeverities.has(sev)) {
-        if (activeSeverities.size > 1) {
-          activeSeverities.delete(sev);
-          pill.classList.remove("active");
-        }
-      } else {
-        activeSeverities.add(sev);
-        pill.classList.add("active");
-      }
-      renderFilteredIssues();
+  // Styles ON/OFF Toggle
+  stylesToggle.addEventListener("change", (e) => {
+    const enabled = e.target.checked;
+    stylesToggleLabel.textContent = enabled ? "Styles ON" : "Styles OFF";
+    if (activeTabId) {
+      chrome.runtime.sendMessage({
+        action: "toggle-styles",
+        tabId: activeTabId,
+        enable: enabled,
+      });
+    }
+  });
+
+  // 5 WAVE Navigation Tabs
+  document.querySelectorAll(".wave-tab").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".wave-tab").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentWaveTab = btn.getAttribute("data-tab");
+      switchWaveTab(currentWaveTab);
     });
   });
 
-  // Category Tabs click
-  document.querySelectorAll(".cat-tab").forEach((tabBtn) => {
-    tabBtn.addEventListener("click", () => {
-      document.querySelectorAll(".cat-tab").forEach((b) => b.classList.remove("active"));
-      tabBtn.classList.add("active");
-      currentCategory = tabBtn.getAttribute("data-cat");
-      renderFilteredIssues();
+  // Details Category Cards click
+  document.querySelectorAll(".wave-cat-card").forEach((card) => {
+    card.addEventListener("click", () => {
+      document.querySelectorAll(".wave-cat-card").forEach((c) => c.classList.remove("active"));
+      card.classList.add("active");
+      currentDetailsCategory = card.getAttribute("data-cat");
+      renderDetailsItems();
     });
   });
 
-  // Search input
-  searchInput.addEventListener("input", (e) => {
-    searchKeyword = e.target.value.trim().toLowerCase();
-    renderFilteredIssues();
+  // Details Search input
+  detailsSearchInput.addEventListener("input", (e) => {
+    detailsSearchKeyword = e.target.value.trim().toLowerCase();
+    renderDetailsItems();
   });
 
-  // Toggle Highlights on page
+  // Reference Search input
+  const refSearchInput = document.getElementById("reference-search-input");
+  if (refSearchInput) {
+    refSearchInput.addEventListener("input", (e) => {
+      referenceSearchKeyword = e.target.value.trim().toLowerCase();
+      renderReferenceRulebook();
+    });
+  }
+
+  // Toggle Overlays on page
   toggleHighlightsBtn.addEventListener("click", () => {
     areHighlightsVisible = !areHighlightsVisible;
     toggleHighlightsBtn.classList.toggle("active", areHighlightsVisible);
@@ -123,11 +309,87 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
+  // Order Tab Stepper & Toggle
+  const orderPrevBtn = document.getElementById("order-prev-btn");
+  const orderNextBtn = document.getElementById("order-next-btn");
+  const orderToggleBadgesBtn = document.getElementById("order-toggle-badges-btn");
+
+  if (orderPrevBtn) {
+    orderPrevBtn.addEventListener("click", () => {
+      if (!currentReport?.focus_order?.length) return;
+      currentOrderIndex = Math.max(1, currentOrderIndex - 1);
+      stepToOrderItem(currentOrderIndex);
+    });
+  }
+
+  if (orderNextBtn) {
+    orderNextBtn.addEventListener("click", () => {
+      if (!currentReport?.focus_order?.length) return;
+      currentOrderIndex = Math.min(currentReport.focus_order.length, currentOrderIndex + 1);
+      stepToOrderItem(currentOrderIndex);
+    });
+  }
+
+  if (orderToggleBadgesBtn) {
+    orderToggleBadgesBtn.addEventListener("click", () => {
+      areOrderPinsVisible = !areOrderPinsVisible;
+      orderToggleBadgesBtn.classList.toggle("active", areOrderPinsVisible);
+      const label = document.getElementById("order-toggle-label");
+      if (label) label.textContent = areOrderPinsVisible ? "Pins: ON" : "Pins: OFF";
+
+      if (activeTabId) {
+        if (areOrderPinsVisible) {
+          chrome.runtime.sendMessage({
+            action: "show-focus-order",
+            tabId: activeTabId,
+            items: currentReport?.focus_order || [],
+          });
+        } else {
+          chrome.runtime.sendMessage({
+            action: "hide-focus-order",
+            tabId: activeTabId,
+          });
+        }
+      }
+    });
+  }
+
   // Export CSV
   exportCsvBtn.addEventListener("click", exportResultsToCSV);
+
+  // Initial render of reference tab
+  renderReferenceRulebook();
 });
 
-// ── Trigger Scan with Step Feedback ─────────────────────────────────
+// ── Switch between 5 WAVE Tabs ──────────────────────────────────────
+function switchWaveTab(tabName) {
+  document.querySelectorAll(".tab-pane").forEach((pane) => pane.classList.add("hidden"));
+  const target = document.getElementById(`tab-content-${tabName}`);
+  if (target) {
+    target.classList.remove("hidden");
+  }
+
+  if (tabName === "order") {
+    renderOrderTab();
+    if (areOrderPinsVisible && activeTabId && currentReport?.focus_order) {
+      chrome.runtime.sendMessage({
+        action: "show-focus-order",
+        tabId: activeTabId,
+        items: currentReport.focus_order,
+      });
+    }
+  } else if (tabName === "structure") {
+    renderStructureTab();
+  } else if (tabName === "contrast") {
+    renderContrastTab();
+  } else if (tabName === "reference") {
+    renderReferenceRulebook();
+  } else if (tabName === "details") {
+    renderDetailsItems();
+  }
+}
+
+// ── Trigger Scan ────────────────────────────────────────────────────
 async function triggerScan() {
   if (!activeTabId) return;
 
@@ -135,20 +397,18 @@ async function triggerScan() {
   resultsDashboardEl.classList.add("hidden");
   loadingStateEl.classList.remove("hidden");
 
-  // Animate loading step messages
   let step = 0;
   const steps = [
     "Traversing live DOM nodes and shadow roots…",
-    "Computing relative luminance & color contrast…",
+    "Computing relative luminance & color contrast ratios…",
     "Checking form labels and interactive controls…",
-    "Verifying heading hierarchy and image alt tags…",
+    "Verifying heading hierarchy and document landmarks…",
+    "Building sequential keyboard focus order…",
   ];
   const stepInterval = setInterval(() => {
     step = (step + 1) % steps.length;
-    if (loadingStepMsgEl) {
-      loadingStepMsgEl.textContent = steps[step];
-    }
-  }, 450);
+    if (loadingStepMsgEl) loadingStepMsgEl.textContent = steps[step];
+  }, 400);
 
   chrome.runtime.sendMessage(
     { action: "scan-page", tabId: activeTabId },
@@ -166,18 +426,18 @@ async function triggerScan() {
       currentReport = response.data;
       renderDashboard(currentReport);
 
-      // Reveal header navigation buttons
+      // Reveal header controls
       rescanBtn.classList.remove("hidden");
       resetViewBtn.classList.remove("hidden");
     }
   );
 }
 
-// ── Render Dashboard ────────────────────────────────────────────────
+// ── Render Dashboard Summary ────────────────────────────────────────
 function renderDashboard(report) {
   resultsDashboardEl.classList.remove("hidden");
 
-  // 1. Scorecard Hero
+  // Score hero
   const score = report.score ?? 100;
   const grade = report.grade ?? "A";
   scoreValEl.textContent = score;
@@ -191,87 +451,139 @@ function renderDashboard(report) {
 
   statsSummaryEl.textContent = `Found ${report.total_issues} issue(s) on ${report.hostname || currentHostname}`;
   const durationTextEl = document.getElementById("audit-duration-text");
-  if (durationTextEl) {
-    durationTextEl.textContent = `${report.duration_ms || 24}ms`;
-  } else if (auditDurationEl) {
-    auditDurationEl.textContent = `${report.duration_ms || 24}ms`;
-  }
+  if (durationTextEl) durationTextEl.textContent = `${report.duration_ms || 24}ms`;
 
-  // 2. Counters
+  // Severity pill counts
   countCriticalEl.textContent = report.summary?.critical || 0;
   countSeriousEl.textContent = report.summary?.serious || 0;
   countModerateEl.textContent = report.summary?.moderate || 0;
   countMinorEl.textContent = report.summary?.minor || 0;
 
-  // 3. Render issues
-  renderFilteredIssues();
+  // Category counts in Tab 1
+  const cats = report.details_categories || {};
+  document.getElementById("count-all-issues").textContent = report.total_issues || 0;
+  document.getElementById("count-cat-errors").textContent = cats.errors?.length || 0;
+  document.getElementById("count-cat-contrast").textContent = cats.contrast_errors?.length || 0;
+  document.getElementById("count-cat-alerts").textContent = cats.alerts?.length || 0;
+  document.getElementById("count-cat-features").textContent = report.features?.length || 0;
+  document.getElementById("count-cat-structure").textContent = report.structure_tree?.length || 0;
+  document.getElementById("count-cat-aria").textContent = report.aria_elements?.length || 0;
+
+  // Render active tab view
+  switchWaveTab(currentWaveTab);
 }
 
-// ── Filter and Display Issues ───────────────────────────────────────
-function renderFilteredIssues() {
+// ── TAB 1: DETAILS ITEM LIST ────────────────────────────────────────
+function renderDetailsItems() {
   if (!currentReport) return;
 
-  const filtered = currentReport.issues.filter((issue) => {
-    // Severity filter
-    if (!activeSeverities.has(issue.severity)) return false;
+  const listEl = document.getElementById("details-item-list");
+  const emptyMsgEl = document.getElementById("empty-filter-msg");
+  listEl.innerHTML = "";
 
-    // Category filter
-    if (currentCategory !== "all") {
-      const issueCat = (issue.category || "general").toLowerCase();
-      if (issueCat !== currentCategory) return false;
-    }
+  const cats = currentReport.details_categories || {};
+  let itemsToRender = [];
 
-    // Search keyword
-    if (searchKeyword) {
-      const haystack = `${issue.rule_id} ${issue.message} ${issue.element} ${issue.how_to_fix}`.toLowerCase();
-      if (!haystack.includes(searchKeyword)) return false;
-    }
-
-    return true;
-  });
-
-  issueListEl.innerHTML = "";
-
-  if (filtered.length === 0) {
-    emptyFilterMsgEl.classList.remove("hidden");
-  } else {
-    emptyFilterMsgEl.classList.add("hidden");
+  if (currentDetailsCategory === "all") {
+    itemsToRender = [...currentReport.issues, ...(currentReport.features || [])];
+  } else if (currentDetailsCategory === "errors") {
+    itemsToRender = cats.errors || [];
+  } else if (currentDetailsCategory === "contrast_errors") {
+    itemsToRender = cats.contrast_errors || [];
+  } else if (currentDetailsCategory === "alerts") {
+    itemsToRender = cats.alerts || [];
+  } else if (currentDetailsCategory === "features") {
+    itemsToRender = currentReport.features || [];
+  } else if (currentDetailsCategory === "structure") {
+    itemsToRender = (currentReport.structure_tree || []).map((s) => ({
+      rule_id: `structure-${s.type}`,
+      severity: "minor",
+      message: `${s.type === "heading" ? `Heading level ${s.level}` : `Landmark <${s.tag}>`}: "${s.text}"`,
+      element: s.element,
+      element_id: s.element_id,
+      how_to_fix: s.skipped_level ? "Heading levels should increase sequentially." : "Semantic structure element.",
+      wcag_criteria: "1.3.1 Info and Relationships",
+    }));
+  } else if (currentDetailsCategory === "aria") {
+    itemsToRender = (currentReport.aria_elements || []).map((a) => ({
+      rule_id: "aria-attribute",
+      severity: "minor",
+      message: `Element <${a.tag}> with ARIA markup: ${a.attributes}`,
+      element: a.element,
+      element_id: a.element_id,
+      how_to_fix: "Ensure ARIA state and roles match current DOM behavior.",
+      wcag_criteria: "4.1.2 Name, Role, Value",
+    }));
   }
 
-  for (const issue of filtered) {
+  // Filter with search keyword
+  if (detailsSearchKeyword) {
+    itemsToRender = itemsToRender.filter((item) => {
+      const haystack = `${item.rule_id} ${item.message} ${item.element || ""} ${item.how_to_fix || ""}`.toLowerCase();
+      return haystack.includes(detailsSearchKeyword);
+    });
+  }
+
+  if (!itemsToRender.length) {
+    emptyMsgEl.classList.remove("hidden");
+    return;
+  }
+  emptyMsgEl.classList.add("hidden");
+
+  for (const item of itemsToRender) {
+    const isFeature = item.severity === "feature";
     const li = document.createElement("li");
-    li.className = `issue-card ${issue.severity}`;
+    li.className = `detail-card ${item.severity || "minor"}`;
+
+    const sevTag = isFeature ? "FEATURE" : (item.severity || "minor").toUpperCase();
 
     li.innerHTML = `
-      <div class="card-top">
-        <span class="card-tag ${issue.severity}">${issue.severity}</span>
-        <span class="rule-id">${escapeHtml(issue.rule_id)}</span>
-        ${
-          issue.element_id
-            ? `<button class="inspect-btn" data-element-id="${escapeHtml(issue.element_id)}" title="Scroll & Inspect Element">
-                <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
-                <span>Inspect</span>
-               </button>`
-            : ""
-        }
-      </div>
-      <p class="card-msg">${escapeHtml(issue.message)}</p>
-      <code class="code-snippet">${escapeHtml(issue.element)}</code>
-      <details class="card-details">
-        <summary>How to fix</summary>
-        <div class="card-fix-content">
-          ${escapeHtml(issue.how_to_fix)}
-          ${issue.wcag_criteria ? `<div class="wcag-ref">WCAG: ${escapeHtml(issue.wcag_criteria)}</div>` : ""}
+      <div class="card-header-row">
+        <div class="card-tags">
+          <span class="card-badge ${item.severity || "minor"}">${sevTag}</span>
+          <span class="card-rule-name">${escapeHtml(item.rule_id || "rule")}</span>
         </div>
-      </details>
+      </div>
+      <p class="card-message">${escapeHtml(item.message || "")}</p>
+      ${item.element ? `<div class="card-snippet">${escapeHtml(item.element)}</div>` : ""}
+      <div class="card-fix-box">
+        <div class="card-fix-title">${isFeature ? "✓ Benefit:" : "💡 Suggested Fix:"}</div>
+        <div>${escapeHtml(item.how_to_fix || "")}</div>
+      </div>
+      <div class="card-footer-row">
+        <span class="card-wcag">${item.wcag_criteria ? `WCAG: ${escapeHtml(item.wcag_criteria)}` : ""}</span>
+        <div class="card-actions">
+          <button class="copy-fix-btn" data-fix="${escapeHtml(item.how_to_fix || "")}">Copy Fix</button>
+          ${
+            item.element_id
+              ? `<button class="inspect-btn" data-id="${item.element_id}">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" y1="22" x2="16.65" y2="16.65"/></svg>
+                  Inspect
+                </button>`
+              : ""
+          }
+        </div>
+      </div>
     `;
 
-    // Bind Inspect Button to scroll directly to the DOM element
+    // Copy fix listener
+    const copyBtn = li.querySelector(".copy-fix-btn");
+    if (copyBtn) {
+      copyBtn.addEventListener("click", () => {
+        const text = copyBtn.getAttribute("data-fix");
+        navigator.clipboard.writeText(text).then(() => {
+          copyBtn.textContent = "Copied!";
+          setTimeout(() => { copyBtn.textContent = "Copy Fix"; }, 1600);
+        });
+      });
+    }
+
+    // Inspect listener
     const inspectBtn = li.querySelector(".inspect-btn");
     if (inspectBtn) {
       inspectBtn.addEventListener("click", () => {
-        const elId = inspectBtn.getAttribute("data-element-id");
-        if (elId && activeTabId) {
+        const elId = inspectBtn.getAttribute("data-id");
+        if (activeTabId && elId) {
           chrome.runtime.sendMessage({
             action: "focus-issue",
             tabId: activeTabId,
@@ -281,36 +593,319 @@ function renderFilteredIssues() {
       });
     }
 
-    issueListEl.appendChild(li);
+    listEl.appendChild(li);
   }
 }
 
-// ── Export Results to CSV ───────────────────────────────────────────
-function exportResultsToCSV() {
-  if (!currentReport || !currentReport.issues.length) {
-    alert("No issues to export!");
+// ── TAB 2: REFERENCE ENCYCLOPEDIA ───────────────────────────────────
+function renderReferenceRulebook() {
+  const container = document.getElementById("reference-rule-list");
+  if (!container) return;
+  container.innerHTML = "";
+
+  let list = RULE_ENCYCLOPEDIA;
+  if (referenceSearchKeyword) {
+    list = list.filter((r) => {
+      const haystack = `${r.name} ${r.wcag} ${r.problem} ${r.why} ${r.fix}`.toLowerCase();
+      return haystack.includes(referenceSearchKeyword);
+    });
+  }
+
+  for (const rule of list) {
+    const card = document.createElement("div");
+    card.className = "ref-rule-card";
+    card.innerHTML = `
+      <div class="ref-rule-header">
+        <span class="ref-rule-title">${escapeHtml(rule.name)}</span>
+        <span class="ref-wcag-badge">${escapeHtml(rule.wcag)}</span>
+      </div>
+      <div class="ref-section">
+        <div class="ref-sec-label">What it means</div>
+        <div class="ref-sec-text">${escapeHtml(rule.problem)}</div>
+      </div>
+      <div class="ref-section">
+        <div class="ref-sec-label">Why it matters</div>
+        <div class="ref-sec-text">${escapeHtml(rule.why)}</div>
+      </div>
+      <div class="ref-section">
+        <div class="ref-sec-label">How to fix</div>
+        <div class="ref-sec-text">${escapeHtml(rule.fix)}</div>
+      </div>
+      <div class="ref-examples-grid">
+        <div class="ref-code-box ref-code-bad">
+          <span class="ref-code-title">❌ Incorrect Implementation</span>
+          <code>${escapeHtml(rule.badHtml)}</code>
+        </div>
+        <div class="ref-code-box ref-code-good">
+          <span class="ref-code-title">✓ Correct Implementation</span>
+          <code>${escapeHtml(rule.goodHtml)}</code>
+        </div>
+      </div>
+    `;
+    container.appendChild(card);
+  }
+}
+
+// ── TAB 3: ORDER (KEYBOARD NAVIGATION) ──────────────────────────────
+function renderOrderTab() {
+  if (!currentReport) return;
+
+  const items = currentReport.focus_order || [];
+  const listEl = document.getElementById("order-item-list");
+  const counterEl = document.getElementById("order-current-step");
+  const alertEl = document.getElementById("order-suspicious-alert");
+  const alertCountEl = document.getElementById("order-suspicious-count");
+
+  listEl.innerHTML = "";
+
+  const suspiciousCount = items.filter((i) => i.is_suspicious_tabindex).length;
+  if (suspiciousCount > 0) {
+    alertEl.classList.remove("hidden");
+    alertCountEl.textContent = suspiciousCount;
+  } else {
+    alertEl.classList.add("hidden");
+  }
+
+  counterEl.textContent = `Item ${currentOrderIndex || (items.length ? 1 : 0)} of ${items.length}`;
+
+  items.forEach((item) => {
+    const li = document.createElement("li");
+    li.className = `order-row ${item.order === currentOrderIndex ? "active" : ""}`;
+    li.setAttribute("data-order-num", item.order);
+
+    li.innerHTML = `
+      <div class="order-num-badge ${item.is_suspicious_tabindex ? "suspicious" : ""}">
+        ${item.order}
+      </div>
+      <span class="order-tag">&lt;${item.tag}&gt;</span>
+      <span class="order-name" title="${escapeHtml(item.accessible_name)}">${escapeHtml(item.accessible_name)}</span>
+      ${
+        item.is_suspicious_tabindex
+          ? `<span class="order-tabindex" style="background:#fed7aa; color:#c2410c;">tabindex="${item.tabindex}"</span>`
+          : `<span class="order-tabindex">tabindex="${item.tabindex}"</span>`
+      }
+    `;
+
+    li.addEventListener("click", () => {
+      stepToOrderItem(item.order);
+    });
+
+    listEl.appendChild(li);
+  });
+}
+
+function stepToOrderItem(orderNumber) {
+  currentOrderIndex = orderNumber;
+  const items = currentReport?.focus_order || [];
+  const counterEl = document.getElementById("order-current-step");
+  if (counterEl) counterEl.textContent = `Item ${orderNumber} of ${items.length}`;
+
+  // Update active styling in popup list
+  document.querySelectorAll(".order-row").forEach((row) => {
+    row.classList.toggle("active", parseInt(row.getAttribute("data-order-num"), 10) === orderNumber);
+  });
+
+  // Scroll active list item into view in popup
+  const activeRow = document.querySelector(`.order-row[data-order-num="${orderNumber}"]`);
+  if (activeRow) activeRow.scrollIntoView({ block: "nearest", behavior: "smooth" });
+
+  // Send message to page to highlight item
+  if (activeTabId) {
+    chrome.runtime.sendMessage({
+      action: "focus-order-item",
+      tabId: activeTabId,
+      orderNumber,
+    });
+  }
+}
+
+// ── TAB 4: STRUCTURE TREE ───────────────────────────────────────────
+function renderStructureTab() {
+  if (!currentReport) return;
+
+  const tree = currentReport.structure_tree || [];
+  const container = document.getElementById("structure-tree-container");
+  container.innerHTML = "";
+
+  if (!tree.length) {
+    container.innerHTML = '<div class="empty-state">No headings or semantic landmarks detected.</div>';
     return;
   }
 
-  const headers = ["rule_id", "category", "severity", "element", "message", "how_to_fix", "wcag_criteria"];
-  const rows = currentReport.issues.map((i) => [
-    `"${(i.rule_id || "").replace(/"/g, '""')}"`,
-    `"${(i.category || "general").replace(/"/g, '""')}"`,
-    `"${(i.severity || "").replace(/"/g, '""')}"`,
-    `"${(i.element || "").replace(/"/g, '""')}"`,
-    `"${(i.message || "").replace(/"/g, '""')}"`,
-    `"${(i.how_to_fix || "").replace(/"/g, '""')}"`,
-    `"${(i.wcag_criteria || "").replace(/"/g, '""')}"`,
-  ]);
+  tree.forEach((node) => {
+    const div = document.createElement("div");
+    div.className = "struct-node";
 
-  const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\r\n");
+    // Indent based on heading level (H1 = 0px, H2 = 14px, H3 = 28px...)
+    let indent = 0;
+    if (node.type === "heading" && node.level) {
+      indent = Math.max(0, (node.level - 1) * 14);
+    }
+    div.style.marginLeft = `${indent}px`;
+
+    const badgeClass = node.type === "heading" ? `h${node.level}` : "landmark";
+    const badgeLabel = node.type === "heading" ? `H${node.level}` : node.landmark_type.toUpperCase();
+
+    div.innerHTML = `
+      <span class="struct-badge ${badgeClass}">${badgeLabel}</span>
+      <span class="struct-text" title="${escapeHtml(node.text)}">${escapeHtml(node.text)}</span>
+      ${node.skipped_level ? `<span class="struct-skip-warning">⚠️ Level Skipped</span>` : ""}
+    `;
+
+    div.addEventListener("click", () => {
+      if (activeTabId && node.element_id) {
+        chrome.runtime.sendMessage({
+          action: "focus-issue",
+          tabId: activeTabId,
+          elementId: node.element_id,
+        });
+      }
+    });
+
+    container.appendChild(div);
+  });
+}
+
+// ── TAB 5: CONTRAST ANALYZER ────────────────────────────────────────
+function renderContrastTab() {
+  if (!currentReport) return;
+
+  const items = currentReport.contrast_items || [];
+  const container = document.getElementById("contrast-items-container");
+  container.innerHTML = "";
+
+  if (!items.length) {
+    container.innerHTML = '<div class="empty-state">No text elements evaluated for contrast.</div>';
+    return;
+  }
+
+  items.forEach((item) => {
+    const card = document.createElement("div");
+    card.className = `contrast-card ${item.passes_aa ? "pass" : "fail"}`;
+
+    card.innerHTML = `
+      <div class="contrast-header-row">
+        <div class="contrast-gauge ${item.passes_aa ? "pass" : "fail"}">
+          <span>${item.ratio_formatted}</span>
+          <span style="font-size:11px; font-weight:500; color:#64748b;">(Req: ${item.required_ratio}:1)</span>
+        </div>
+        <div class="contrast-compliance-badges">
+          <span class="wcag-compliance-pill ${item.passes_aa ? "pass" : "fail"}">AA ${item.passes_aa ? "PASS" : "FAIL"}</span>
+          <span class="wcag-compliance-pill ${item.passes_aaa ? "pass" : "fail"}">AAA ${item.passes_aaa ? "PASS" : "FAIL"}</span>
+        </div>
+      </div>
+      <div class="contrast-colors-row">
+        <div class="color-swatch-group">
+          <span class="color-swatch" style="background-color: ${item.fg_hex};"></span>
+          <span class="color-code">Text: ${item.fg_hex}</span>
+        </div>
+        <div class="color-swatch-group">
+          <span class="color-swatch" style="background-color: ${item.bg_hex};"></span>
+          <span class="color-code">Bg: ${item.bg_hex}</span>
+        </div>
+      </div>
+      <div class="contrast-text-sample" style="color: ${item.fg_hex}; background-color: ${item.bg_hex}; font-weight: ${item.is_large ? "bold" : "normal"};">
+        "${escapeHtml(item.text)}"
+      </div>
+      ${
+        !item.passes_aa && item.suggested_color
+          ? `<div class="contrast-suggest-box">
+              <span class="suggest-text">💡 Suggested accessible color: <strong>${item.suggested_color}</strong> (${item.suggested_ratio}:1)</span>
+              <button class="suggest-copy-btn" data-color="${item.suggested_color}">Copy Hex</button>
+            </div>`
+          : ""
+      }
+      <div style="display:flex; justify-content:flex-end; margin-top:6px;">
+        <button class="inspect-btn" data-id="${item.element_id}">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" y1="22" x2="16.65" y2="16.65"/></svg>
+          Inspect Element
+        </button>
+      </div>
+    `;
+
+    // Copy hex listener
+    const copyBtn = card.querySelector(".suggest-copy-btn");
+    if (copyBtn) {
+      copyBtn.addEventListener("click", () => {
+        const hex = copyBtn.getAttribute("data-color");
+        navigator.clipboard.writeText(hex).then(() => {
+          copyBtn.textContent = "Copied!";
+          setTimeout(() => { copyBtn.textContent = "Copy Hex"; }, 1600);
+        });
+      });
+    }
+
+    // Inspect listener
+    const inspectBtn = card.querySelector(".inspect-btn");
+    if (inspectBtn) {
+      inspectBtn.addEventListener("click", () => {
+        if (activeTabId && item.element_id) {
+          chrome.runtime.sendMessage({
+            action: "focus-issue",
+            tabId: activeTabId,
+            elementId: item.element_id,
+          });
+        }
+      });
+    }
+
+    container.appendChild(card);
+  });
+}
+
+// ── CSV Report Export ───────────────────────────────────────────────
+function exportResultsToCSV() {
+  if (!currentReport) return;
+
+  const rows = [
+    ["Type", "Category", "Severity", "Rule ID", "WCAG Criterion", "Element Selector", "Message", "Suggested Fix"],
+  ];
+
+  // 1. Add issues
+  (currentReport.issues || []).forEach((i) => {
+    rows.push([
+      "Violation",
+      i.category || "general",
+      i.severity,
+      i.rule_id,
+      i.wcag_criteria || "",
+      i.selector || "",
+      i.message,
+      i.how_to_fix,
+    ]);
+  });
+
+  // 2. Add features
+  (currentReport.features || []).forEach((f) => {
+    rows.push([
+      "Feature",
+      f.category || "general",
+      "feature",
+      f.rule_id,
+      f.wcag_criteria || "",
+      f.selector || "",
+      f.message,
+      f.how_to_fix,
+    ]);
+  });
+
+  const csvContent = rows
+    .map((row) =>
+      row
+        .map((cell) => {
+          const str = (cell || "").toString().replace(/"/g, '""');
+          return `"${str}"`;
+        })
+        .join(",")
+    )
+    .join("\r\n");
+
   const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
-
   const a = document.createElement("a");
   a.href = url;
-  const host = currentReport.hostname || currentHostname || "page";
-  a.download = `lantern-audit-${host}-${Date.now()}.csv`;
+  const safeHost = (currentReport.hostname || "lantern-audit").replace(/[^a-z0-9_-]/gi, "_");
+  a.download = `lantern-accessibility-${safeHost}-${Date.now()}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

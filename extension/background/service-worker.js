@@ -1,12 +1,13 @@
 /**
- * Lantern – Background Service Worker
+ * Lantern – Background Service Worker (WAVE-Inspired)
  *
  * Orchestrates communication between Popup UI, Content Auditor, and Backend.
  *
  * Guaranteed In-Page Highlighting:
  * - Direct execution via chrome.scripting ensures 100% reliable script injection
- * - Directly triggers window.lanternApplyHighlights to avoid message port race conditions
+ * - Directly triggers window.lanternApplyHighlights (issues + positive features)
  * - Traverses live rendered DOM including Shadow DOM
+ * - Forwards Styles ON/OFF and Reading/Focus Order messages to active tab
  * - Syncs report to FastAPI backend for reporting and CSV/PDF export
  */
 
@@ -21,11 +22,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true; // asynchronous response
   }
 
-  if (
-    message.action === "focus-issue" ||
-    message.action === "toggle-highlights" ||
-    message.action === "clear-highlights"
-  ) {
+  // Forward interactive page commands
+  const forwardActions = new Set([
+    "focus-issue",
+    "toggle-highlights",
+    "clear-highlights",
+    "toggle-styles",
+    "show-focus-order",
+    "hide-focus-order",
+    "focus-order-item",
+  ]);
+
+  if (forwardActions.has(message.action)) {
     chrome.tabs.sendMessage(message.tabId, message, (resp) => {
       sendResponse(resp || { success: true });
     });
@@ -46,7 +54,9 @@ async function handleScanPage(tabId) {
     url.startsWith("edge://") ||
     url.startsWith("about:")
   ) {
-    throw new Error("Cannot audit internal browser pages. Please open any web page (http://, https://, or file://).");
+    throw new Error(
+      "Cannot audit internal browser pages. Please open any web page (http://, https://, or file://)."
+    );
   }
 
   // 1. Inject highlight styles
@@ -71,21 +81,22 @@ async function handleScanPage(tabId) {
     throw new Error("Audit engine failed to initialize on this webpage.");
   }
 
-  // 4. Trigger in-page visual highlights directly
+  // 4. Trigger in-page visual highlights directly (issues + positive features)
   await chrome.scripting.executeScript({
     target: { tabId },
-    func: (issues) => {
+    func: (issues, features) => {
       if (window.lanternApplyHighlights) {
-        window.lanternApplyHighlights(issues);
+        window.lanternApplyHighlights(issues, features);
       }
     },
-    args: [report.issues],
+    args: [report.issues, report.features || []],
   }).catch(() => {});
 
   // Message fallback
   chrome.tabs.sendMessage(tabId, {
     action: "highlight-issues",
     issues: report.issues,
+    features: report.features || [],
   }).catch(() => {});
 
   // 5. Best-effort async sync to FastAPI backend (if running)
