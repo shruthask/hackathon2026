@@ -1,14 +1,186 @@
-/* ── Lantern injected highlight styles ────────────────────────── */
+/* ── Lantern In-Page Overlay & Highlighter Styles ───────────────── */
 
-.lantern-highlight {
-  font-family: system-ui, -apple-system, sans-serif !important;
-  font-size: 11px !important;
-  line-height: 1.3 !important;
-  pointer-events: auto !important;
-}
-
-[data-lantern-flagged] {
+/* Offending Element Outlines */
+.lantern-element-flagged {
   outline-style: solid !important;
   outline-width: 3px !important;
-  outline-offset: 2px !important;
+  outline-offset: 3px !important;
+  transition: outline-color 0.2s, box-shadow 0.2s !important;
+}
+
+.lantern-border-critical {
+  outline-color: #dc2626 !important;
+}
+.lantern-border-serious {
+  outline-color: #ea580c !important;
+}
+.lantern-border-moderate {
+  outline-color: #ca8a04 !important;
+}
+.lantern-border-minor {
+  outline-color: #475569 !important;
+}
+
+.lantern-suppress-outline {
+  outline: none !important;
+}
+
+/* Pulsing halo when user clicks an issue in the popup */
+@keyframes lanternPulseGlow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 16px rgba(220, 38, 38, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+  }
+}
+
+.lantern-element-pulse {
+  animation: lanternPulseGlow 1.2s ease-out 2 !important;
+}
+
+/* Injected Badge Pins on Elements */
+.lantern-injected-badge {
+  position: absolute !important;
+  z-index: 2147483640 !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  padding: 3px 7px !important;
+  border-radius: 4px !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  pointer-events: auto !important;
+  transition: transform 0.15s ease, filter 0.15s ease !important;
+}
+
+.lantern-injected-badge:hover {
+  transform: scale(1.08) !important;
+  filter: brightness(1.15) !important;
+}
+
+.lantern-bg-critical {
+  background-color: #dc2626 !important;
+}
+.lantern-bg-serious {
+  background-color: #ea580c !important;
+}
+.lantern-bg-moderate {
+  background-color: #ca8a04 !important;
+}
+.lantern-bg-minor {
+  background-color: #475569 !important;
+}
+
+/* Interactive Floating Tooltip Card */
+.lantern-interactive-tooltip {
+  position: absolute !important;
+  z-index: 2147483647 !important;
+  width: 320px !important;
+  background: #ffffff !important;
+  color: #1e293b !important;
+  border-radius: 8px !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+  border: 1px solid #cbd5e1 !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  overflow: hidden !important;
+  animation: lanternFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+@keyframes lanternFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.lantern-tooltip-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 8px 12px !important;
+  color: #ffffff !important;
+}
+
+.lantern-badge-tag {
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.5px !important;
+  background: rgba(0, 0, 0, 0.25) !important;
+  padding: 2px 6px !important;
+  border-radius: 3px !important;
+}
+
+.lantern-rule-name {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  margin-left: 8px !important;
+  flex: 1 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.lantern-close-btn {
+  background: transparent !important;
+  border: none !important;
+  color: #ffffff !important;
+  font-size: 18px !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  padding: 0 4px !important;
+  opacity: 0.8 !important;
+}
+.lantern-close-btn:hover {
+  opacity: 1 !important;
+}
+
+.lantern-tooltip-body {
+  padding: 12px !important;
+  font-size: 13px !important;
+  line-height: 1.45 !important;
+}
+
+.lantern-msg {
+  font-weight: 500 !important;
+  color: #0f172a !important;
+  margin: 0 0 8px 0 !important;
+}
+
+.lantern-fix-box {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-left: 3px solid #2563eb !important;
+  border-radius: 4px !important;
+  padding: 8px !important;
+  margin-bottom: 8px !important;
+}
+
+.lantern-fix-title {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #1e40af !important;
+  margin-bottom: 3px !important;
+}
+
+.lantern-fix-text {
+  font-size: 12px !important;
+  color: #334155 !important;
+}
+
+.lantern-wcag-ref {
+  font-size: 11px !important;
+  color: #64748b !important;
+  font-weight: 500 !important;
 }

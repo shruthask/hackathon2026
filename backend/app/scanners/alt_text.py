@@ -68,6 +68,7 @@ def scan(html: str) -> list[Issue]:
         issues.append(
             Issue(
                 rule_id="img-alt-missing",
+                category="images",
                 severity=Severity.critical,
                 element=snippet,
                 selector=_css_selector(img),

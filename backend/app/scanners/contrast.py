@@ -125,6 +125,7 @@ def scan(html: str) -> list[Issue]:
             issues.append(
                 Issue(
                     rule_id="contrast-low",
+                    category="contrast",
                     severity=Severity.moderate if ratio >= 3.0 else Severity.serious,
                     element=snippet,
                     selector=None,

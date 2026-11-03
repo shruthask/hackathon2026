@@ -1,7 +1,7 @@
 """
 Pydantic schemas for scan requests and responses.
 
-Every scanner produces a list of `Issue` objects.  The API wraps them in a
+Every scanner produces a list of `Issue` objects. The API wraps them in a
 `ScanResponse` so the React frontend and Chrome extension always receive
 the same JSON shape.
 """
@@ -30,10 +30,18 @@ class Issue(BaseModel):
         ...,
         description="Machine-readable rule identifier, e.g. 'img-alt-missing'.",
     )
+    category: Optional[str] = Field(
+        "general",
+        description="Issue domain: 'images', 'forms', 'headings', 'contrast', 'navigation', 'general'",
+    )
     severity: Severity
     element: str = Field(
         ...,
         description="The HTML snippet of the offending element (truncated).",
+    )
+    element_id: Optional[str] = Field(
+        None,
+        description="In-page live DOM identifier for high-precision inspection.",
     )
     selector: Optional[str] = Field(
         None,
@@ -70,10 +78,21 @@ class ScanResponse(BaseModel):
 
     source: str = Field(
         ...,
-        description="'url', 'html', or 'file' — how the HTML was provided.",
+        description="'url', 'html', 'file', or 'live-dom' — how the audit was performed.",
     )
     url: Optional[str] = None
+    page_title: Optional[str] = None
+    hostname: Optional[str] = None
     total_issues: int
+    score: Optional[int] = Field(
+        100,
+        description="Accessibility health score from 0 to 100.",
+    )
+    grade: Optional[str] = Field(
+        "A",
+        description="Letter grade (A, B, C, D, F) based on violation density.",
+    )
+    duration_ms: Optional[int] = None
     summary: dict[str, int] = Field(
         default_factory=dict,
         description="Count of issues per severity: {'critical': 2, 'serious': 1, …}",

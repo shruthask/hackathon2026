@@ -31,6 +31,7 @@ def scan(html: str) -> list[Issue]:
         issues.append(
             Issue(
                 rule_id="heading-order-first",
+                category="headings",
                 severity=Severity.serious,
                 element=str(first)[:200],
                 selector=None,
@@ -48,6 +49,7 @@ def scan(html: str) -> list[Issue]:
             issues.append(
                 Issue(
                     rule_id="heading-order-skip",
+                    category="headings",
                     severity=Severity.serious,
                     element=str(heading)[:200],
                     selector=None,

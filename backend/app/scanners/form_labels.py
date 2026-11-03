@@ -62,6 +62,7 @@ def scan(html: str) -> list[Issue]:
             issues.append(
                 Issue(
                     rule_id="form-label-missing",
+                    category="forms",
                     severity=Severity.critical,
                     element=snippet,
                     selector=None,

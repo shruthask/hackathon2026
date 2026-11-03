@@ -3,37 +3,125 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Lantern</title>
+  <title>Lantern Accessibility Auditor</title>
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
-  <header>
-    <h1>🔦 Lantern</h1>
-    <p class="tagline">Accessibility Checker</p>
+  <!-- Header -->
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-icon">🔦</span>
+      <div>
+        <h1 class="brand-title">Lantern</h1>
+        <p class="brand-sub">WCAG 2.1 Auditor</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <span id="site-badge" class="site-badge hidden">example.com</span>
+      <button id="rescan-btn" class="icon-btn" title="Re-scan current page">🔄</button>
+    </div>
   </header>
 
-  <main>
-    <button id="scan-btn">Scan This Page</button>
+  <!-- Initial / Empty State -->
+  <div id="initial-state" class="state-card">
+    <div class="hero-illustration">🔍</div>
+    <h2>Audit Any Webpage</h2>
+    <p>Runs a comprehensive in-browser WCAG check on live DOM elements, computed contrast, forms, headings, and images.</p>
+    <button id="start-scan-btn" class="primary-btn">
+      <span>Scan Active Tab</span>
+    </button>
+  </div>
 
-    <div id="status" class="hidden"></div>
+  <!-- Loading State -->
+  <div id="loading-state" class="state-card hidden">
+    <div class="spinner"></div>
+    <p class="loading-title">Analyzing page structure & contrast…</p>
+    <p class="loading-sub">Inspecting live DOM nodes and computed styles</p>
+  </div>
 
-    <!-- Summary counts -->
-    <div id="summary" class="hidden">
-      <div class="pill critical"><span id="count-critical">0</span> Critical</div>
-      <div class="pill serious"><span id="count-serious">0</span> Serious</div>
-      <div class="pill moderate"><span id="count-moderate">0</span> Moderate</div>
-      <div class="pill minor"><span id="count-minor">0</span> Minor</div>
+  <!-- Results Dashboard -->
+  <main id="results-dashboard" class="hidden">
+    <!-- Score Hero -->
+    <section class="score-hero">
+      <div class="score-dial">
+        <div id="score-grade" class="grade-badge grade-b">B</div>
+        <div class="score-numbers">
+          <span id="score-val" class="score-val">82</span>
+          <span class="score-max">/100</span>
+        </div>
+      </div>
+      <div class="score-details">
+        <h3 id="score-title" class="score-title">Good Accessibility</h3>
+        <p id="stats-summary" class="stats-text">Found 6 issues across 142 elements</p>
+        <span id="audit-duration" class="meta-tag">⚡ 28ms</span>
+      </div>
+    </section>
+
+    <!-- Severity Filter Pills -->
+    <section class="severity-bar">
+      <button class="sev-pill critical active" data-filter="critical">
+        <span id="count-critical" class="pill-count">0</span> Critical
+      </button>
+      <button class="sev-pill serious active" data-filter="serious">
+        <span id="count-serious" class="pill-count">0</span> Serious
+      </button>
+      <button class="sev-pill moderate active" data-filter="moderate">
+        <span id="count-moderate" class="pill-count">0</span> Moderate
+      </button>
+      <button class="sev-pill minor active" data-filter="minor">
+        <span id="count-minor" class="pill-count">0</span> Minor
+      </button>
+    </section>
+
+    <!-- Category Tabs -->
+    <nav class="category-tabs">
+      <button class="cat-tab active" data-cat="all">All</button>
+      <button class="cat-tab" data-cat="images">Images</button>
+      <button class="cat-tab" data-cat="forms">Forms</button>
+      <button class="cat-tab" data-cat="headings">Headings</button>
+      <button class="cat-tab" data-cat="contrast">Contrast</button>
+      <button class="cat-tab" data-cat="navigation">Navigation</button>
+    </nav>
+
+    <!-- Search & Toolbar -->
+    <div class="filter-toolbar">
+      <div class="search-box">
+        <input type="text" id="search-input" placeholder="Filter issues by name or tag…" />
+      </div>
+      <div class="toolbar-actions">
+        <button id="toggle-highlights-btn" class="tool-btn active" title="Toggle In-Page Outlines">
+          👁️ Outlines
+        </button>
+        <button id="export-csv-btn" class="tool-btn" title="Export as CSV">
+          📥 CSV
+        </button>
+      </div>
     </div>
 
-    <!-- Issue list -->
-    <ul id="issue-list"></ul>
+    <!-- Issues List Container -->
+    <section class="issues-container">
+      <div id="empty-filter-msg" class="empty-state hidden">
+        No issues match your current filters.
+      </div>
+      <ul id="issue-list" class="issue-list"></ul>
+    </section>
 
-    <!-- Disclaimer -->
-    <p id="disclaimer" class="hidden">
-      ⚠️ This scan checks a <strong>limited</strong> set of rules. It does
-      <em>not</em> guarantee full WCAG compliance. Always perform manual testing
-      with assistive technologies.
-    </p>
+    <!-- Manual Testing & Disclaimer Accordion -->
+    <footer class="app-footer">
+      <details class="guidance-accordion">
+        <summary>⚠️ WCAG Disclaimer & Manual Testing Guide</summary>
+        <div class="guidance-content">
+          <p class="disclaimer-note">
+            Automated tools catch only ~30–40% of WCAG barriers. Always complete manual checks:
+          </p>
+          <ul class="manual-checklist">
+            <li><strong>⌨️ Keyboard Tab Test:</strong> Press <kbd>Tab</kbd> to ensure all interactive elements receive visible focus and are operable without a mouse.</li>
+            <li><strong>🗣️ Screen Reader:</strong> Test with VoiceOver (<kbd>Cmd + F5</kbd> on macOS) or NVDA on Windows.</li>
+            <li><strong>🔍 200% Zoom:</strong> Zoom browser to 200% to ensure layout reflows without overlapping content.</li>
+          </ul>
+        </div>
+      </details>
+    </footer>
   </main>
 
   <script src="popup.js"></script>
