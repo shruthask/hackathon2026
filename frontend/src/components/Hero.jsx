@@ -78,7 +78,7 @@ export default function Hero({ onStartAudit }) {
 
             {/* Box 2: Download Extension */}
             <a
-              href="/lantern-extension.zip"
+              href="./lantern-extension.zip"
               download="lantern-extension.zip"
               className="w-full sm:w-[250px] h-[72px] px-4 rounded-2xl bg-[#0B132B]/80 hover:bg-[#0E1938] text-white border border-slate-700/70 hover:border-[#F28C28]/80 shadow-xl shadow-black/30 hover:shadow-orange-500/10 hover:-translate-y-0.5 active:translate-y-0 backdrop-blur-xl transition-all duration-200 flex items-center gap-3.5 cursor-pointer group"
             >

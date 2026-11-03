@@ -1,0 +1,69 @@
+========================================================================
+LANTERN CHROME EXTENSION — INSTALLATION & SETUP GUIDE
+========================================================================
+
+Thank you for downloading Lantern, the automated WCAG 2.1 accessibility 
+auditing extension for developers.
+
+Follow these simple steps to load and activate the extension in Chrome:
+
+------------------------------------------------------------------------
+STEP 1: EXTRACT THE ZIP ARCHIVE
+------------------------------------------------------------------------
+1. If you haven't already, unzip/extract this downloaded archive 
+   ("lantern-extension.zip") into a folder on your computer.
+2. Ensure you have the extracted folder open, which contains `manifest.json`.
+
+------------------------------------------------------------------------
+STEP 2: OPEN CHROME EXTENSIONS SETTINGS
+------------------------------------------------------------------------
+1. Open Google Chrome (or any Chromium browser: Edge, Brave, Arc, Opera).
+2. Type or paste the following into the address bar and press Enter:
+   
+   chrome://extensions
+   
+   (In Microsoft Edge, visit edge://extensions instead)
+
+------------------------------------------------------------------------
+STEP 3: ENABLE DEVELOPER MODE
+------------------------------------------------------------------------
+1. Look at the TOP-RIGHT corner of the `chrome://extensions` page.
+2. Toggle the switch labeled "Developer mode" to ON.
+   (A new sub-menu will appear with buttons like "Load unpacked", 
+   "Pack extension", etc.)
+
+------------------------------------------------------------------------
+STEP 4: LOAD UNPACKED EXTENSION
+------------------------------------------------------------------------
+1. Click the "Load unpacked" button in the TOP-LEFT corner.
+2. In the file picker dialog, browse to and SELECT the extracted folder 
+   (the folder that directly contains `manifest.json`, `popup/`, etc.).
+3. Click "Select" or "Open".
+
+------------------------------------------------------------------------
+STEP 5: PIN & START AUDITING
+------------------------------------------------------------------------
+1. Click the Extensions icon (puzzle piece icon 🧩) next to your 
+   address bar in Chrome.
+2. Find "Lantern — Web Accessibility Auditor" and click the Pin icon 📌 
+   to keep it in your toolbar.
+3. Open any website (e.g., your local development server or any live URL).
+4. Click the Lantern icon in your toolbar and press "Audit This Page"!
+
+------------------------------------------------------------------------
+FEATURES INCLUDED:
+------------------------------------------------------------------------
+• Live In-Browser Diagnostics: Tests the live rendered DOM for image 
+  alt-text, heading hierarchy, form labels, and color contrast.
+• In-Page Highlight Overlays: Highlights violations directly in the active 
+  webpage so you can see exactly where issues are located.
+• WAVE-Style Text Linearization / Styles Reset: View raw semantic structure.
+• Direct Code Remediations: Generates copy-paste fixes for every violation.
+• Live Web Platform Sync: Syncs with the Lantern developer platform.
+
+------------------------------------------------------------------------
+SUPPORT & UPDATES
+------------------------------------------------------------------------
+Website: https://shruthask.github.io/hackathon2026/
+Built with ❤️ by Rishik, Sindhu, Samved, Sinchana & Shrutha.
+========================================================================
