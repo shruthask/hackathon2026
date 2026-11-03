@@ -201,9 +201,9 @@ export default function App() {
         
         {/* Scan Console View */}
         {activeView === 'console' && (
-          <div className="space-y-12">
+          <div>
             
-            {/* Developer-First Hero Banner */}
+            {/* Developer-First Full Viewport Hero */}
             <Hero 
               onSelectSample={handleSelectSample} 
               onStartAudit={handleStartAuditClick}
