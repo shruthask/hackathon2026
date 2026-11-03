@@ -13,7 +13,10 @@
       <img src="../icons/logo.png" alt="Lantern" class="header-logo" />
     </div>
     <div class="header-actions">
-      <span id="site-badge" class="site-badge" title="Active Tab Host">detecting…</span>
+      <span id="site-badge" class="site-badge" title="Active Tab Host">
+        <img id="header-site-favicon" class="header-site-favicon hidden" alt="" src="" />
+        <span id="header-site-domain">detecting…</span>
+      </span>
 
       <!-- Styles ON/OFF Toggle Switch -->
       <div class="styles-toggle-wrapper" title="Toggle webpage CSS styles without affecting Lantern overlays">
@@ -47,7 +50,12 @@
 
     <h2 class="welcome-title">Website Accessibility Audit</h2>
     <p class="welcome-sub">
-      Ready to analyze <strong id="welcome-site-name" class="highlight-domain">current page</strong> for WCAG 2.1 compliance barriers.
+      Ready to analyze
+      <span class="welcome-domain-wrap">
+        <img id="welcome-site-favicon" class="site-favicon-inline hidden" alt="" src="" />
+        <strong id="welcome-site-name" class="highlight-domain">current page</strong>
+      </span>
+      for WCAG 2.1 compliance barriers.
     </p>
 
     <!-- Capabilities Highlights with Minimal SVG Icons -->
@@ -104,13 +112,27 @@
       </div>
       <div class="score-details">
         <h3 id="score-title" class="score-title">Good Accessibility</h3>
-        <p id="stats-summary" class="stats-text">Found 6 issue(s) on this page</p>
+        <p id="stats-summary" class="stats-text">
+          <span id="stats-summary-prefix">Found 6 issue(s) on</span>
+          <span class="scanned-site-inline">
+            <img id="stats-site-favicon" class="site-favicon-inline hidden" alt="" src="" />
+            <strong id="stats-site-domain">this page</strong>
+          </span>
+        </p>
         <div class="meta-row">
           <span id="audit-duration" class="meta-tag">
             <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px; vertical-align:-1px;"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
             <span id="audit-duration-text">28ms</span>
           </span>
           <span class="meta-tag engine-tag">Live DOM Engine</span>
+        </div>
+      </div>
+
+      <!-- Scanned Website Logo Emblem -->
+      <div id="scanned-website-card" class="scanned-website-card" title="Audited Website Logo">
+        <img id="scanned-site-logo" class="scanned-site-logo" alt="Website Logo" src="" />
+        <div id="scanned-site-fallback" class="scanned-site-fallback hidden">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
         </div>
       </div>
     </section>

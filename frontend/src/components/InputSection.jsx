@@ -85,7 +85,7 @@ export default function InputSection({
   };
 
   return (
-    <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 z-20 relative">
+    <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-2 sm:py-4 z-20 relative">
       <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
         
         {/* Navigation Tabs ("Three Front Doors") */}

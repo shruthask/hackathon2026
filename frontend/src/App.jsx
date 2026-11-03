@@ -209,8 +209,14 @@ export default function App() {
               onStartAudit={handleStartAuditClick}
             />
 
-            {/* Input Section ("Three Front Doors") */}
-            <div ref={inputSectionRef}>
+            {/* Input Section with Smooth Gradient Bridge from Hero Deep Blue to Slate-50 White */}
+            <div 
+              ref={inputSectionRef}
+              className="relative pt-10 sm:pt-14 pb-16 sm:pb-20 transition-all"
+              style={{
+                background: 'linear-gradient(180deg, #070D1E 0%, #0C1838 14%, #152756 28%, #294074 44%, #556E9D 60%, #95A9CA 75%, #D6DFEE 88%, #F8FAFC 100%)'
+              }}
+            >
               <InputSection
                 onScanUrl={handleScanUrl}
                 onScanHtml={handleScanHtml}
@@ -254,12 +260,12 @@ export default function App() {
 
         {/* Guidelines View */}
         {activeView === 'guidelines' && (
-          <Guidelines />
+          <Guidelines onGoToConsole={() => setActiveView('console')} />
         )}
 
         {/* Manual Testing Guide View */}
         {activeView === 'manual-testing' && (
-          <ManualTestingGuide />
+          <ManualTestingGuide onGoToConsole={() => setActiveView('console')} />
         )}
 
         {/* Before and After Comparison View */}

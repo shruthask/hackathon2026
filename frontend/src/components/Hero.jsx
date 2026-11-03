@@ -1,5 +1,5 @@
 import React from 'react';
-import { Compass, Download, ChevronDown } from 'lucide-react';
+import { Compass, Download, ArrowRight } from 'lucide-react';
 import AxialBeam from './AxialBeam';
 
 export default function Hero({ onStartAudit }) {
@@ -57,52 +57,47 @@ export default function Hero({ onStartAudit }) {
             Instant WCAG 2.1 diagnostics and copy-paste code fixes for developers.
           </p>
 
-          {/* Two Action Boxes (Start Audit & Download Extension) */}
-          <div className="mt-8 sm:mt-9 flex flex-col sm:flex-row items-center justify-center gap-4 w-full max-w-md">
+          {/* Two Action Boxes (Start Audit & Download Extension) - Symmetrical & Clean */}
+          <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 w-full max-w-xl px-2">
             
             {/* Box 1: Start Audit */}
             <button
               onClick={onStartAudit}
-              className="w-full sm:w-1/2 p-4 rounded-xl bg-[#F28C28] hover:bg-[#e07d1e] text-slate-950 font-black text-xs sm:text-sm shadow-xl shadow-orange-500/25 hover:shadow-orange-500/40 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2.5 cursor-pointer group"
+              className="w-full sm:w-[250px] h-[72px] px-4 rounded-2xl bg-gradient-to-r from-[#F28C28] to-[#EA580C] hover:from-[#e57d19] hover:to-[#d94e08] text-slate-950 shadow-xl shadow-orange-500/20 hover:shadow-orange-500/35 hover:-translate-y-0.5 active:translate-y-0 border border-white/25 transition-all duration-200 flex items-center gap-3.5 cursor-pointer group"
             >
-              <Compass className="w-4 h-4 text-slate-950 group-hover:rotate-45 transition-transform" />
-              <div className="text-left">
-                <span className="block leading-none font-black">Start Audit</span>
-                <span className="block text-[10px] font-semibold text-slate-900/80 mt-1">Scan URL or HTML</span>
+              <div className="w-10 h-10 rounded-xl bg-slate-950/10 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <Compass className="w-5 h-5 text-slate-950 group-hover:rotate-45 transition-transform duration-300" />
               </div>
+              <div className="text-left flex-1 min-w-0">
+                <span className="block text-sm font-bold tracking-tight text-slate-950 whitespace-nowrap">Start Audit</span>
+                <span className="block text-[11px] font-semibold text-slate-900/75 mt-0.5 whitespace-nowrap">Scan URL or HTML</span>
+              </div>
+              <ArrowRight className="w-4 h-4 text-slate-950/60 group-hover:translate-x-1 group-hover:text-slate-950 transition-all shrink-0" />
             </button>
 
             {/* Box 2: Download Extension */}
             <a
               href="/lantern-extension.zip"
               download="lantern-extension.zip"
-              className="w-full sm:w-1/2 p-4 rounded-xl bg-slate-900/80 hover:bg-slate-800/95 text-white border border-slate-700/80 hover:border-[#F28C28] shadow-xl shadow-black/40 hover:-translate-y-0.5 active:translate-y-0 backdrop-blur-md transition-all flex items-center justify-center gap-2.5 cursor-pointer group"
+              className="w-full sm:w-[250px] h-[72px] px-4 rounded-2xl bg-[#0B132B]/80 hover:bg-[#0E1938] text-white border border-slate-700/70 hover:border-[#F28C28]/80 shadow-xl shadow-black/30 hover:shadow-orange-500/10 hover:-translate-y-0.5 active:translate-y-0 backdrop-blur-xl transition-all duration-200 flex items-center gap-3.5 cursor-pointer group"
             >
-              <Download className="w-4 h-4 text-[#F28C28] group-hover:translate-y-0.5 transition-transform" />
-              <div className="text-left">
-                <span className="block leading-none font-black text-white">Download Extension</span>
-                <span className="block text-[10px] font-medium text-slate-400 mt-1">Chrome Manifest V3</span>
+              <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:border-[#F28C28]/40 transition-all">
+                <Download className="w-5 h-5 text-[#F28C28] group-hover:translate-y-0.5 transition-transform" />
               </div>
+              <div className="text-left flex-1 min-w-0">
+                <span className="block text-sm font-bold tracking-tight text-white whitespace-nowrap">Download Extension</span>
+                <span className="block text-[11px] font-medium text-slate-400 mt-0.5 whitespace-nowrap">Chrome Manifest V3</span>
+              </div>
+              <ArrowRight className="w-4 h-4 text-slate-500 group-hover:translate-x-1 group-hover:text-[#F28C28] transition-all shrink-0" />
             </a>
 
           </div>
 
         </div>
-
-        {/* Subtle Scroll Indicator at bottom */}
-        <div className="relative z-10 mt-auto pt-6 pb-2">
-          <button
-            onClick={onStartAudit}
-            className="flex flex-col items-center gap-1 text-slate-400/80 hover:text-[#F28C28] transition-colors cursor-pointer group"
-            aria-label="Scroll to audit"
-          >
-            <span className="text-[10px] sm:text-[11px] font-semibold tracking-widest uppercase opacity-75 group-hover:opacity-100 transition-opacity">
-              Audit Console
-            </span>
-            <ChevronDown className="w-4 h-4 text-[#F28C28] animate-bounce" />
-          </button>
-        </div>
       </AxialBeam>
+
+      {/* Subtle fade of the beam canvas into solid deep blue at bottom */}
+      <div className="absolute bottom-0 inset-x-0 h-28 sm:h-36 pointer-events-none z-10 bg-gradient-to-b from-transparent to-[#070D1E]" />
     </section>
   );
 }

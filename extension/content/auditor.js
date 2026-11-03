@@ -1021,6 +1021,23 @@
     let focusOrder = [];
     let structureTree = [];
     let ariaElements = [];
+    let faviconUrl = "";
+
+    try {
+      // 1. Try apple-touch-icon (high-resolution)
+      const appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
+      if (appleIcon && appleIcon.href) {
+        faviconUrl = appleIcon.href;
+      } else {
+        // 2. Try rel="icon" or shortcut icon
+        const iconEl = document.querySelector('link[rel~="icon"]') || document.querySelector('link[rel="shortcut icon"]');
+        if (iconEl && iconEl.href) {
+          faviconUrl = iconEl.href;
+        } else if (window.location.origin && window.location.origin.startsWith("http")) {
+          faviconUrl = `${window.location.origin}/favicon.ico`;
+        }
+      }
+    } catch (e) {}
 
     try { auditDocumentMeta(issues, features); } catch (e) { console.error("Lantern meta audit error:", e); }
     try { auditImages(issues, features); } catch (e) { console.error("Lantern images audit error:", e); }
@@ -1060,6 +1077,7 @@
       url: window.location.href,
       page_title: document.title || window.location.hostname,
       hostname: window.location.hostname,
+      favicon_url: faviconUrl,
       total_issues: issues.length,
       score,
       grade,

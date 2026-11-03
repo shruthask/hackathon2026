@@ -24,13 +24,29 @@ export default function Footer() {
 
           <div>
             <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
-              Team Architecture
+              Team Members
             </h4>
-            <ul className="space-y-1.5 text-slate-600">
-              <li><strong>Laptop 1:</strong> FastAPI Core & Scanners</li>
-              <li><strong>Laptop 2:</strong> React & Tailwind Platform</li>
-              <li><strong>Laptop 3:</strong> Chrome Extension</li>
-              <li><strong>Laptop 4:</strong> Data Aggregation & Exports</li>
+            <ul className="space-y-1.5 text-slate-600 font-medium">
+              <li className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#F28C28]" />
+                <span className="font-semibold text-slate-800">Rishik</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#F28C28]" />
+                <span className="font-semibold text-slate-800">Sindhu</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#F28C28]" />
+                <span className="font-semibold text-slate-800">Samved</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#F28C28]" />
+                <span className="font-semibold text-slate-800">Sinchana</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#F28C28]" />
+                <span className="font-semibold text-slate-800">Shrutha</span>
+              </li>
             </ul>
           </div>
 
@@ -50,7 +66,7 @@ export default function Footer() {
         </div>
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-400">
-          <p>© 2026 Lantern Project • Hackathon WEB-04 Website Accessibility Checker</p>
+          <p>© 2026 Lantern • Built by Rishik, Sindhu, Samved, Sinchana & Shrutha</p>
           <p className="flex items-center gap-1">
             Built with <span>FastAPI, React & Tailwind CSS</span>
           </p>

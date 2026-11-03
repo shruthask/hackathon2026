@@ -185,6 +185,93 @@ let initialStateEl, loadingStateEl, loadingStepMsgEl, resultsDashboardEl;
 let scoreValEl, scoreGradeEl, scoreTitleEl, statsSummaryEl;
 let countCriticalEl, countSeriousEl, countModerateEl, countMinorEl;
 let toggleHighlightsBtn, exportCsvBtn, detailsSearchInput;
+let currentTabFavicon = "";
+
+// ── Update Scanned Website Logo & Favicons ───────────────────────────
+function updateWebsiteLogos(hostname, rawFavicon) {
+  const logoImg = document.getElementById("scanned-site-logo");
+  const fallbackBox = document.getElementById("scanned-site-fallback");
+  const inlineFavicon = document.getElementById("stats-site-favicon");
+  const headerFavicon = document.getElementById("header-site-favicon");
+  const welcomeFavicon = document.getElementById("welcome-site-favicon");
+
+  const cleanHost = (hostname || "").trim().toLowerCase();
+  const isWebDomain = cleanHost && !cleanHost.includes("local") && cleanHost.includes(".");
+
+  // 1. Determine best candidate URL
+  let primaryUrl = "";
+  if (rawFavicon && typeof rawFavicon === "string" && (rawFavicon.startsWith("http") || rawFavicon.startsWith("data:"))) {
+    primaryUrl = rawFavicon;
+  } else if (isWebDomain) {
+    primaryUrl = `https://www.google.com/s2/favicons?domain=${cleanHost}&sz=128`;
+  }
+
+  const googleFallbackUrl = isWebDomain ? `https://www.google.com/s2/favicons?domain=${cleanHost}&sz=128` : "";
+
+  if (primaryUrl) {
+    // Score hero main logo emblem (44x44 card)
+    if (logoImg) {
+      logoImg.src = primaryUrl;
+      logoImg.classList.remove("hidden");
+      if (fallbackBox) fallbackBox.classList.add("hidden");
+
+      logoImg.onerror = () => {
+        if (googleFallbackUrl && logoImg.src !== googleFallbackUrl) {
+          logoImg.src = googleFallbackUrl;
+        } else {
+          logoImg.classList.add("hidden");
+          if (fallbackBox) fallbackBox.classList.remove("hidden");
+        }
+      };
+    }
+
+    // Inline favicon next to domain in score summary
+    if (inlineFavicon) {
+      inlineFavicon.src = primaryUrl;
+      inlineFavicon.classList.remove("hidden");
+      inlineFavicon.onerror = () => {
+        if (googleFallbackUrl && inlineFavicon.src !== googleFallbackUrl) {
+          inlineFavicon.src = googleFallbackUrl;
+        } else {
+          inlineFavicon.classList.add("hidden");
+        }
+      };
+    }
+
+    // Top header site badge favicon
+    if (headerFavicon) {
+      headerFavicon.src = primaryUrl;
+      headerFavicon.classList.remove("hidden");
+      headerFavicon.onerror = () => {
+        if (googleFallbackUrl && headerFavicon.src !== googleFallbackUrl) {
+          headerFavicon.src = googleFallbackUrl;
+        } else {
+          headerFavicon.classList.add("hidden");
+        }
+      };
+    }
+
+    // Welcome screen favicon
+    if (welcomeFavicon) {
+      welcomeFavicon.src = primaryUrl;
+      welcomeFavicon.classList.remove("hidden");
+      welcomeFavicon.onerror = () => {
+        if (googleFallbackUrl && welcomeFavicon.src !== googleFallbackUrl) {
+          welcomeFavicon.src = googleFallbackUrl;
+        } else {
+          welcomeFavicon.classList.add("hidden");
+        }
+      };
+    }
+  } else {
+    // If no logo available (e.g. file:// or invalid host)
+    if (logoImg) logoImg.classList.add("hidden");
+    if (fallbackBox) fallbackBox.classList.remove("hidden");
+    if (inlineFavicon) inlineFavicon.classList.add("hidden");
+    if (headerFavicon) headerFavicon.classList.add("hidden");
+    if (welcomeFavicon) welcomeFavicon.classList.add("hidden");
+  }
+}
 
 document.addEventListener("DOMContentLoaded", async () => {
   // Grab DOM elements
@@ -215,10 +302,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   exportCsvBtn = document.getElementById("export-csv-btn");
   detailsSearchInput = document.getElementById("details-search-input");
 
-  // Determine active tab URL
+  // Determine active tab URL and tab favicon
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (tab) {
     activeTabId = tab.id;
+    currentTabFavicon = tab.favIconUrl || "";
     try {
       const urlObj = new URL(tab.url || "");
       currentHostname = urlObj.hostname || "local page";
@@ -227,8 +315,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  siteBadgeEl.textContent = currentHostname;
-  welcomeSiteNameEl.textContent = currentHostname;
+  const headerDomainEl = document.getElementById("header-site-domain");
+  if (headerDomainEl) headerDomainEl.textContent = currentHostname;
+  if (welcomeSiteNameEl) welcomeSiteNameEl.textContent = currentHostname;
+
+  // Initialize logos across header and welcome screen
+  updateWebsiteLogos(currentHostname, currentTabFavicon);
 
   // Scan triggers
   startScanBtn.addEventListener("click", triggerScan);
@@ -462,7 +554,14 @@ function renderDashboard(report) {
   else if (score >= 70) scoreTitleEl.textContent = "Needs Attention";
   else scoreTitleEl.textContent = "Significant Accessibility Barriers";
 
-  statsSummaryEl.textContent = `Found ${report.total_issues} issue(s) on ${report.hostname || currentHostname}`;
+  const issuesPrefixEl = document.getElementById("stats-summary-prefix");
+  const statsDomainEl = document.getElementById("stats-site-domain");
+  if (issuesPrefixEl) issuesPrefixEl.textContent = `Found ${report.total_issues} issue(s) on`;
+  if (statsDomainEl) statsDomainEl.textContent = report.hostname || currentHostname;
+
+  // Update website logo avatar and favicons
+  updateWebsiteLogos(report.hostname || currentHostname, report.favicon_url || currentTabFavicon);
+
   const durationTextEl = document.getElementById("audit-duration-text");
   if (durationTextEl) durationTextEl.textContent = `${report.duration_ms || 24}ms`;
 
