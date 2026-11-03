@@ -697,6 +697,10 @@ function renderDashboard(report) {
   document.getElementById("count-cat-structure").textContent = report.structure_tree?.length || 0;
   document.getElementById("count-cat-aria").textContent = report.aria_elements?.length || 0;
 
+  // Set reference scope dynamically based on findings
+  currentReferenceScope = (report.total_issues > 0) ? "detected" : "all";
+  updateReferenceScopeButtons();
+
   // Render active tab view
   switchWaveTab(currentWaveTab);
 }
@@ -789,6 +793,7 @@ function renderDetailsItems() {
       <div class="card-footer-row">
         <span class="card-wcag">${item.wcag_criteria ? `WCAG: ${escapeHtml(item.wcag_criteria)}` : ""}</span>
         <div class="card-actions">
+          <button class="ref-link-btn" data-rule="${escapeHtml(item.rule_id || "")}" title="View rule explanation, user impact, and WCAG code fixes">📖 Rule Info</button>
           <button class="copy-fix-btn" data-fix="${escapeHtml(item.how_to_fix || "")}">Copy Fix</button>
           ${
             item.element_id
@@ -801,6 +806,20 @@ function renderDetailsItems() {
         </div>
       </div>
     `;
+
+    // Rule Info button listener (switches to Reference tab and opens rule)
+    const refBtn = li.querySelector(".ref-link-btn");
+    if (refBtn) {
+      refBtn.addEventListener("click", () => {
+        const rid = refBtn.getAttribute("data-rule");
+        switchWaveTab("reference");
+        document.querySelectorAll(".wave-tab").forEach((b) => b.classList.remove("active"));
+        document.querySelector('.wave-tab[data-tab="reference"]')?.classList.add("active");
+        currentWaveTab = "reference";
+        setReferenceScope("all");
+        renderReferenceRulebook(rid);
+      });
+    }
 
     // Copy fix listener
     const copyBtn = li.querySelector(".copy-fix-btn");
@@ -833,31 +852,131 @@ function renderDetailsItems() {
   }
 }
 
-// ── TAB 2: REFERENCE ENCYCLOPEDIA (MINIMAL ACCORDION) ───────────────
-function renderReferenceRulebook() {
+// ── TAB 2: DYNAMIC REFERENCE ENCYCLOPEDIA ────────────────────────────
+let currentReferenceScope = "detected";
+
+function getCategorySvg(category) {
+  switch (category) {
+    case "images":
+      return `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`;
+    case "forms":
+      return `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`;
+    case "contrast":
+      return `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v20a10 10 0 0 0 0-20z" fill="currentColor"/></svg>`;
+    case "headings":
+      return `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16"/><path d="M4 18V6"/><path d="M20 18V6"/></svg>`;
+    case "navigation":
+      return `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`;
+    default:
+      return `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`;
+  }
+}
+
+function updateReferenceScopeButtons() {
+  document.getElementById("ref-scope-detected-btn")?.classList.toggle("active", currentReferenceScope === "detected");
+  document.getElementById("ref-scope-all-btn")?.classList.toggle("active", currentReferenceScope === "all");
+}
+
+function setReferenceScope(scope) {
+  currentReferenceScope = scope;
+  updateReferenceScopeButtons();
+  renderReferenceRulebook();
+}
+
+function renderReferenceRulebook(targetRuleIdToOpen = null) {
   const container = document.getElementById("reference-rule-list");
   if (!container) return;
   container.innerHTML = "";
 
+  // 1. Gather detected rules and counts from current audit report
+  const detectedCounts = {};
+  if (currentReport && currentReport.issues) {
+    for (const issue of currentReport.issues) {
+      if (issue.rule_id) {
+        detectedCounts[issue.rule_id] = (detectedCounts[issue.rule_id] || 0) + 1;
+      }
+    }
+  }
+
+  const detectedRuleIdList = Object.keys(detectedCounts);
+  const detectedCountBadge = document.getElementById("ref-detected-count");
+  if (detectedCountBadge) {
+    detectedCountBadge.textContent = detectedRuleIdList.length;
+  }
+
+  // 2. Filter rules by scope and search keyword
   let list = RULE_ENCYCLOPEDIA;
+
+  if (currentReferenceScope === "detected") {
+    // If scanning hasn't occurred or no issues detected
+    if (detectedRuleIdList.length === 0) {
+      if (!currentReport) {
+        container.innerHTML = `
+          <div class="empty-state" style="padding: 24px 16px;">
+            <p style="font-weight:700; color:#1e293b; margin-bottom:4px;">No Scan Completed Yet</p>
+            <p style="font-size:11.5px; color:#64748b; margin-bottom:12px;">Run a scan or switch to the All Rules Library to browse WCAG guidelines.</p>
+            <button id="ref-empty-browse-btn" class="tool-btn" style="margin:0 auto;">Browse All Rules (18)</button>
+          </div>
+        `;
+      } else {
+        container.innerHTML = `
+          <div class="empty-state" style="padding: 24px 16px;">
+            <p style="font-size:20px; margin-bottom:6px;">🎉</p>
+            <p style="font-weight:700; color:#15803d; margin-bottom:4px;">No Violations Detected on This Page!</p>
+            <p style="font-size:11.5px; color:#64748b; margin-bottom:12px;">${escapeHtml(currentHostname)} passed all automated accessibility criteria evaluated by Lantern.</p>
+            <button id="ref-empty-browse-btn" class="tool-btn" style="margin:0 auto;">Browse All Rules (18)</button>
+          </div>
+        `;
+      }
+      document.getElementById("ref-empty-browse-btn")?.addEventListener("click", () => {
+        setReferenceScope("all");
+      });
+      return;
+    }
+
+    list = list.filter((r) => (detectedCounts[r.id] || 0) > 0);
+  }
+
   if (referenceSearchKeyword) {
     list = list.filter((r) => {
-      const haystack = `${r.name} ${r.wcag} ${r.problem} ${r.why} ${r.fix}`.toLowerCase();
+      const haystack = `${r.name} ${r.wcagCode} ${r.problem} ${r.why} ${r.fix}`.toLowerCase();
       return haystack.includes(referenceSearchKeyword);
     });
   }
 
+  if (list.length === 0) {
+    container.innerHTML = '<div class="empty-state">No accessibility rules match your search.</div>';
+    return;
+  }
+
   list.forEach((rule, idx) => {
     const card = document.createElement("div");
-    // Expand the first item by default if not searching, collapse the rest
-    card.className = `ref-rule-card ${idx === 0 && !referenceSearchKeyword ? "is-open" : ""}`;
+    const countHere = detectedCounts[rule.id] || 0;
+    const isDetected = countHere > 0;
+    const shouldBeOpen = targetRuleIdToOpen ? targetRuleIdToOpen === rule.id : (idx === 0);
+
+    card.className = `ref-rule-card ${rule.severity || "moderate"} ${shouldBeOpen ? "is-open" : ""}`;
+    card.id = `ref-card-${rule.id}`;
+
+    const catIconSvg = getCategorySvg(rule.category || "structure");
+
     card.innerHTML = `
-      <div class="ref-rule-header" role="button" tabindex="0" title="Click to view full rule explanation and code example">
+      <div class="ref-rule-header" role="button" tabindex="0" title="Click to view explanation, user impact, and HTML examples">
         <div class="ref-header-left">
-          <span class="ref-rule-title">${escapeHtml(rule.name)}</span>
+          <div class="ref-category-icon ${rule.category || 'structure'}" title="${rule.category || 'Rule'}">
+            ${catIconSvg}
+          </div>
+          <div class="ref-title-group">
+            <span class="ref-rule-title">${escapeHtml(rule.name)}</span>
+            ${
+              isDetected
+                ? `<span class="ref-detected-tag">⚠️ Found ${countHere} time(s) on this page</span>`
+                : ""
+            }
+          </div>
         </div>
         <div class="ref-header-right">
-          <span class="ref-wcag-badge">${escapeHtml(rule.wcag)}</span>
+          <span class="ref-wcag-badge" title="${escapeHtml(rule.wcag)}">${escapeHtml(rule.wcagCode || rule.wcag)}</span>
           <svg class="ref-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="6 9 12 15 18 9"/>
           </svg>
@@ -873,9 +992,25 @@ function renderReferenceRulebook() {
           <div class="ref-sec-text">${escapeHtml(rule.why)}</div>
         </div>
         <div class="ref-section">
-          <div class="ref-sec-label">How to fix</div>
+          <div class="ref-sec-label">User Impact</div>
+          <div class="ref-sec-text">${escapeHtml(rule.impact)}</div>
+        </div>
+        <div class="ref-section">
+          <div class="ref-sec-label">Suggested Fix</div>
           <div class="ref-sec-text">${escapeHtml(rule.fix)}</div>
         </div>
+
+        ${
+          isDetected
+            ? `<div style="margin: 8px 0;">
+                <button class="ref-inspect-page-btn tool-btn" data-rule="${rule.id}">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:3px;"><circle cx="12" cy="12" r="10"/><line x1="22" y1="22" x2="16.65" y2="16.65"/></svg>
+                  View Affected Elements in Details Tab &rarr;
+                </button>
+              </div>`
+            : ""
+        }
+
         <div class="ref-examples-stack">
           <div class="ref-code-box ref-code-bad">
             <span class="ref-code-title">
@@ -907,8 +1042,32 @@ function renderReferenceRulebook() {
       }
     });
 
+    // Jump to details button
+    const jumpBtn = card.querySelector(".ref-inspect-page-btn");
+    if (jumpBtn) {
+      jumpBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        switchWaveTab("details");
+        document.querySelectorAll(".wave-tab").forEach((b) => b.classList.remove("active"));
+        document.querySelector('.wave-tab[data-tab="details"]')?.classList.add("active");
+        currentWaveTab = "details";
+        detailsSearchKeyword = rule.name.toLowerCase();
+        if (detailsSearchInput) detailsSearchInput.value = rule.name;
+        renderDetailsItems();
+      });
+    }
+
     container.appendChild(card);
   });
+
+  if (targetRuleIdToOpen) {
+    const el = document.getElementById(`ref-card-${targetRuleIdToOpen}`);
+    if (el) {
+      setTimeout(() => {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+    }
+  }
 }
 
 // ── TAB 3: ORDER (KEYBOARD NAVIGATION) ──────────────────────────────
