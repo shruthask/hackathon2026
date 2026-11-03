@@ -1,0 +1,14 @@
+/* ── Lantern injected highlight styles ────────────────────────── */
+
+.lantern-highlight {
+  font-family: system-ui, -apple-system, sans-serif !important;
+  font-size: 11px !important;
+  line-height: 1.3 !important;
+  pointer-events: auto !important;
+}
+
+[data-lantern-flagged] {
+  outline-style: solid !important;
+  outline-width: 3px !important;
+  outline-offset: 2px !important;
+}

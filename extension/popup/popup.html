@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lantern</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header>
+    <h1>🔦 Lantern</h1>
+    <p class="tagline">Accessibility Checker</p>
+  </header>
+
+  <main>
+    <button id="scan-btn">Scan This Page</button>
+
+    <div id="status" class="hidden"></div>
+
+    <!-- Summary counts -->
+    <div id="summary" class="hidden">
+      <div class="pill critical"><span id="count-critical">0</span> Critical</div>
+      <div class="pill serious"><span id="count-serious">0</span> Serious</div>
+      <div class="pill moderate"><span id="count-moderate">0</span> Moderate</div>
+      <div class="pill minor"><span id="count-minor">0</span> Minor</div>
+    </div>
+
+    <!-- Issue list -->
+    <ul id="issue-list"></ul>
+
+    <!-- Disclaimer -->
+    <p id="disclaimer" class="hidden">
+      ⚠️ This scan checks a <strong>limited</strong> set of rules. It does
+      <em>not</em> guarantee full WCAG compliance. Always perform manual testing
+      with assistive technologies.
+    </p>
+  </main>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<!-- BUG: Missing lang attribute on <html> -->
+<head>
+  <meta charset="UTF-8" />
+  <title>Broken Bakery – Test Page</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+  </style>
+</head>
+<body>
+
+  <!-- ================================================================
+       This page is DELIBERATELY broken for testing Lantern scanners.
+       Every section below triggers at least one accessibility rule.
+       ================================================================ -->
+
+  <!-- ── 1. HEADING ORDER ISSUES ──────────────────────────────────── -->
+  <!-- BUG: Page starts with h3 instead of h1 -->
+  <h3>Welcome to the Broken Bakery</h3>
+  <p>We bake the worst-accessible bread on the internet.</p>
+
+  <!-- BUG: Jumps from h3 → h5 (skips h4) -->
+  <h5>Our Menu</h5>
+
+  <!-- ── 2. MISSING ALT TEXT ──────────────────────────────────────── -->
+  <!-- BUG: No alt attribute at all -->
+  <img src="croissant.jpg" width="200" />
+
+  <!-- BUG: Empty alt without decorative role -->
+  <img src="baguette.jpg" alt="" width="200" />
+
+  <!-- GOOD: Decorative image correctly marked -->
+  <img src="divider.png" alt="" role="presentation" width="400" />
+
+  <!-- GOOD: Meaningful alt text -->
+  <img src="sourdough.jpg" alt="A freshly baked sourdough loaf" width="200" />
+
+  <!-- ── 3. FORM LABEL ISSUES ─────────────────────────────────────── -->
+  <h2>Order Form</h2>
+
+  <form>
+    <!-- BUG: Input with no label and no id -->
+    <input type="text" name="customer_name" placeholder="Your name" />
+
+    <!-- BUG: Input with id but no matching <label for="..."> -->
+    <input type="email" id="email" placeholder="Email" />
+
+    <!-- GOOD: Properly labelled -->
+    <label for="quantity">Quantity:</label>
+    <input type="number" id="quantity" min="1" value="1" />
+
+    <!-- BUG: Select with no label -->
+    <select name="bread_type">
+      <option value="">Choose bread…</option>
+      <option value="rye">Rye</option>
+      <option value="wheat">Wheat</option>
+    </select>
+
+    <!-- BUG: Textarea with no label -->
+    <textarea name="notes" rows="3" placeholder="Special requests"></textarea>
+
+    <button type="submit">Place Order</button>
+  </form>
+
+  <!-- ── 4. COLOUR CONTRAST ISSUES ────────────────────────────────── -->
+  <!-- BUG: Light grey text on white background → ratio ≈ 1.6:1 -->
+  <p style="color: lightgray; background-color: white;">
+    This text is nearly invisible due to poor contrast.
+  </p>
+
+  <!-- BUG: Yellow text on white → very low ratio -->
+  <p style="color: yellow; background: white;">
+    Can you even read this?
+  </p>
+
+  <!-- GOOD: Dark text on light background -->
+  <p style="color: #1a1a2e; background-color: #fafbfc;">
+    This text has excellent contrast.
+  </p>
+
+  <!-- ── 5. MISC ISSUES (for future scanners) ─────────────────────── -->
+  <!-- No skip-nav link -->
+  <!-- No landmark regions -->
+  <!-- Links with generic text -->
+  <a href="#">Click here</a> for our full menu.
+
+</body>
+</html>

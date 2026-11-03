@@ -1,0 +1,138 @@
+/* ── Lantern Popup Styles ───────────────────────────────────────── */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  width: 360px;
+  max-height: 520px;
+  overflow-y: auto;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  font-size: 13px;
+  color: #1a1a2e;
+  background: #fafbfc;
+  padding: 14px;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 12px;
+}
+header h1 {
+  font-size: 20px;
+}
+.tagline {
+  font-size: 11px;
+  color: #555;
+}
+
+/* ── Scan button ──────────────────────────────────────────────── */
+#scan-btn {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  background: #4361ee;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+#scan-btn:hover {
+  background: #3a56d4;
+}
+
+/* ── Status messages ──────────────────────────────────────────── */
+#status {
+  text-align: center;
+  margin-top: 10px;
+  padding: 6px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+.info    { background: #e8f0fe; color: #1967d2; }
+.success { background: #e6f4ea; color: #137333; }
+.warning { background: #fef7e0; color: #b06000; }
+.error   { background: #fce8e6; color: #c5221f; }
+
+/* ── Summary pills ────────────────────────────────────────────── */
+#summary {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.pill {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+}
+.pill.critical { background: #d32f2f; }
+.pill.serious  { background: #e65100; }
+.pill.moderate { background: #f9a825; color: #333; }
+.pill.minor    { background: #78909c; }
+
+/* ── Issue list ───────────────────────────────────────────────── */
+#issue-list {
+  list-style: none;
+  margin-top: 12px;
+}
+.issue {
+  padding: 8px;
+  margin-bottom: 8px;
+  border-left: 4px solid;
+  border-radius: 4px;
+  background: #fff;
+}
+.issue.critical { border-color: #d32f2f; }
+.issue.serious  { border-color: #e65100; }
+.issue.moderate { border-color: #f9a825; }
+.issue.minor    { border-color: #78909c; }
+
+.severity-badge {
+  display: inline-block;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  color: #fff;
+  vertical-align: middle;
+  margin-left: 6px;
+}
+.severity-badge.critical { background: #d32f2f; }
+.severity-badge.serious  { background: #e65100; }
+.severity-badge.moderate { background: #f9a825; color: #333; }
+.severity-badge.minor    { background: #78909c; }
+
+details {
+  margin-top: 6px;
+  font-size: 12px;
+}
+details code {
+  display: block;
+  margin-top: 4px;
+  padding: 4px;
+  background: #f4f4f4;
+  border-radius: 4px;
+  font-size: 11px;
+  word-break: break-all;
+}
+
+/* ── Disclaimer ───────────────────────────────────────────────── */
+#disclaimer {
+  margin-top: 14px;
+  padding: 8px;
+  border-radius: 6px;
+  background: #fff8e1;
+  font-size: 11px;
+  color: #6d4c00;
+}
+
+/* ── Utility ──────────────────────────────────────────────────── */
+.hidden { display: none !important; }
