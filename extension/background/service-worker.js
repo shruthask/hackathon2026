@@ -11,7 +11,7 @@
  * - Syncs report to FastAPI backend for reporting and CSV/PDF export
  */
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = "https://lantern-backend-rluf.onrender.com";
 
 // ── Listen for messages from popup ──────────────────────────────────
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {

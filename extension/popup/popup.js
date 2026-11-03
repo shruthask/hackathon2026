@@ -1362,18 +1362,20 @@ async function openExpandedWebDashboard() {
     return;
   }
 
+  const backendUrl = "https://lantern-backend-rluf.onrender.com";
+  const dashboardUrl = "https://shruthask.github.io/hackathon2026/?source=extension";
+
   // 1. Sync live DOM audit report to FastAPI backend store
   try {
-    fetch("http://localhost:8000/api/scan/audit-sync", {
+    fetch(`${backendUrl}/api/scan/audit-sync`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(currentReport),
     }).catch(() => {});
   } catch (_) {}
 
-  // 2. Open Vite React web dashboard in expanded view
-  const targetUrl = "http://localhost:5173/?source=extension";
-  chrome.tabs.create({ url: targetUrl }, (newTab) => {
+  // 2. Open live GitHub Pages React web dashboard in expanded view
+  chrome.tabs.create({ url: dashboardUrl }, (newTab) => {
     if (!newTab || !newTab.id) return;
 
     const pushReportToTab = () => {
