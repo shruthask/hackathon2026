@@ -262,6 +262,12 @@
     return true;
   }
 
+  // Expose directly on window for direct invocation
+  window.lanternApplyHighlights = applyHighlights;
+  window.lanternFocusIssue = focusAndScrollToIssue;
+  window.lanternToggleHighlights = setHighlightsVisibility;
+  window.lanternClearHighlights = clearAllHighlights;
+
   // ── Runtime Message Listener ────────────────────────────────────
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === "highlight-issues") {
