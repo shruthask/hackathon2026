@@ -39,7 +39,10 @@ async def scan_url(body: ScanURLRequest):
         async with httpx.AsyncClient(
             follow_redirects=True,
             timeout=15,
-            headers={"User-Agent": "Lantern-Accessibility-Auditor/1.0"}
+            headers={
+                "User-Agent": "LanternAccessibilityChecker/1.0 (https://github.com/shruthask/hackathon2026; lantern@example.com)",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            }
         ) as client:
             resp = await client.get(body.url)
             resp.raise_for_status()

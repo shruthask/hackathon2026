@@ -2,53 +2,85 @@
  * Lantern – Advanced In-Browser DOM Accessibility Auditor
  *
  * Runs directly in the live webpage context to audit ANY website:
- * - Dynamic Single Page Applications (React, Vue, Angular, Next.js)
- * - Complex CSS-in-JS, Tailwind, and external stylesheets
- * - Computed contrast ratios with background color blending
- * - Accurate visibility and bounding rect checks (no false positives on hidden elements)
- * - Assigns stable data-lantern-id attributes for 100% reliable in-page highlighting
+ * - Traverses Shadow DOM roots (YouTube, Polymer, Web Components, Custom Elements)
+ * - Strict visibility detection: filters out templates, skeletons, and tracking pixels
+ * - Live computed contrast with alpha-blending
+ * - Capped rule-based scoring (like Lighthouse) to prevent false-positive score zeroing
  */
 
 (function () {
-  if (window.__LANTERN_AUDITOR_LOADED__) return;
+  // Allow re-audit on subsequent button clicks
   window.__LANTERN_AUDITOR_LOADED__ = true;
 
-  // ── UUID / Element ID Generator ─────────────────────────────────
   let issueCounter = 0;
   function getUniqueLanternId() {
     issueCounter += 1;
     return `lantern-node-${Date.now()}-${issueCounter}`;
   }
 
-  // ── Visibility & Element Helpers ────────────────────────────────
+  // ── Deep Shadow-DOM Element Querying ────────────────────────────
+  function querySelectorAllDeep(selector, root = document) {
+    const results = [];
+    function traverse(node) {
+      if (!node) return;
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        try {
+          if (node.matches && node.matches(selector)) {
+            results.push(node);
+          }
+        } catch (e) {}
+
+        if (node.shadowRoot) {
+          traverse(node.shadowRoot);
+        }
+      }
+      const children = node.children || [];
+      for (let i = 0; i < children.length; i++) {
+        traverse(children[i]);
+      }
+    }
+    traverse(root);
+    return results;
+  }
+
+  // ── Visibility & Element Filtering ──────────────────────────────
   function isElementVisible(el) {
     if (!el || el.nodeType !== Node.ELEMENT_NODE) return false;
+
+    // Filter out inactive templates or noscripts
+    if (el.closest("template, noscript, [inert]")) return false;
+    if (el.hasAttribute("hidden")) return false;
+
+    // Filter out elements hidden from assistive tech
+    if (el.closest('[aria-hidden="true"]')) return false;
+
     const style = window.getComputedStyle(el);
     if (
       style.display === "none" ||
       style.visibility === "hidden" ||
-      style.opacity === "0"
+      parseFloat(style.opacity) === 0
     ) {
       return false;
     }
-    // Skip if hidden from assistive technologies
-    if (el.closest('[aria-hidden="true"]')) return false;
 
     const rect = el.getBoundingClientRect();
-    if (rect.width === 0 && rect.height === 0) {
-      // Check if it has non-zero children or scroll area
-      return el.children.length > 0;
+    // Element must have non-zero geometry or non-empty visible text
+    if (rect.width <= 1 && rect.height <= 1) {
+      return false;
     }
+
     return true;
   }
 
-  function getReadableSnippet(el, maxLen = 180) {
+  function getReadableSnippet(el, maxLen = 160) {
     if (!el || !el.outerHTML) return "";
-    const clone = el.cloneNode(false); // shallow clone without children
+    const clone = el.cloneNode(false);
     let html = clone.outerHTML;
     if (el.innerHTML && el.innerHTML.trim().length > 0) {
-      const text = (el.innerText || el.textContent || "").trim().slice(0, 40);
-      html = html.replace(/><\/[a-zA-Z0-9_-]+>$/, `>${text}...</${el.tagName.toLowerCase()}>`);
+      const text = (el.innerText || el.textContent || "").trim().slice(0, 35);
+      if (text) {
+        html = html.replace(/><\/[a-zA-Z0-9_-]+>$/, `>${text}...</${el.tagName.toLowerCase()}>`);
+      }
     }
     if (html.length > maxLen) {
       html = html.slice(0, maxLen) + "...>";
@@ -60,7 +92,9 @@
     if (el.id) return `#${CSS.escape(el.id)}`;
     const path = [];
     let curr = el;
-    while (curr && curr.nodeType === Node.ELEMENT_NODE && curr !== document.documentElement) {
+    let depth = 0;
+    while (curr && curr.nodeType === Node.ELEMENT_NODE && curr !== document.documentElement && depth < 5) {
+      depth++;
       let selector = curr.tagName.toLowerCase();
       if (curr.id) {
         selector += `#${CSS.escape(curr.id)}`;
@@ -80,7 +114,7 @@
     return path.join(" > ");
   }
 
-  // ── Color & Contrast Engine with Alpha Blending ─────────────────
+  // ── Color & Contrast Engine ─────────────────────────────────────
   function parseRgba(colorStr) {
     if (!colorStr) return null;
     const m = colorStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
@@ -99,7 +133,7 @@
     const alpha = fg.a;
     return {
       r: Math.round(fg.r * alpha + bg.r * (1 - alpha)),
-      g: Math.round(fg.g * alpha + bg.g * (1 - alpha)),
+      g: Math.round(fg.g * alpha + bg.r * (1 - alpha)),
       b: Math.round(fg.b * alpha + bg.b * (1 - alpha)),
       a: 1.0,
     };
@@ -107,19 +141,18 @@
 
   function getEffectiveBackgroundColor(el) {
     let curr = el;
-    let bgStack = [];
+    const bgStack = [];
 
     while (curr && curr.nodeType === Node.ELEMENT_NODE) {
       const style = window.getComputedStyle(curr);
       const parsed = parseRgba(style.backgroundColor);
       if (parsed && parsed.a > 0) {
         bgStack.unshift(parsed);
-        if (parsed.a === 1.0) break; // fully opaque
+        if (parsed.a === 1.0) break;
       }
       curr = curr.parentElement;
     }
 
-    // Default browser canvas background is white
     let finalBg = { r: 255, g: 255, b: 255, a: 1.0 };
     for (const bg of bgStack) {
       finalBg = blendColors(bg, finalBg);
@@ -148,30 +181,42 @@
   const fileExtAltPattern = /\.(png|jpg|jpeg|gif|webp|svg)$/i;
 
   function auditImages(issues) {
-    const images = document.querySelectorAll("img, [role='img'], svg, input[type='image']");
-    images.forEach((el) => {
-      if (!isElementVisible(el)) return;
+    const images = querySelectorAllDeep("img, [role='img'], svg, input[type='image']");
+    let flaggedCount = 0;
+    const maxFlagged = 40;
+
+    for (const el of images) {
+      if (flaggedCount >= maxFlagged) break;
+      if (!isElementVisible(el)) continue;
 
       const tag = el.tagName.toLowerCase();
       const role = el.getAttribute("role");
       const isAriaHidden = el.getAttribute("aria-hidden") === "true";
       const hasPresentationRole = role === "presentation" || role === "none";
 
-      if (isAriaHidden || hasPresentationRole) return;
+      if (isAriaHidden || hasPresentationRole) continue;
 
       if (tag === "img") {
-        const alt = el.getAttribute("alt");
-        const id = getUniqueLanternId();
-        el.setAttribute("data-lantern-id", id);
+        const src = (el.getAttribute("src") || "").trim();
+        const dataSrc = el.getAttribute("data-src");
+        const srcset = el.getAttribute("srcset");
 
-        // Check if image is wrapped in a link with no other text
+        // Filter out empty skeleton template placeholders
+        if (!src && !dataSrc && !srcset) continue;
+        if (src.includes("data:image/gif;base64,R0lGODlhAQAB")) continue;
+
+        const alt = el.getAttribute("alt");
         const parentLink = el.closest("a");
         const isSoleLinkContent =
           parentLink &&
           (parentLink.innerText || parentLink.textContent || "").trim() === "" &&
           parentLink.querySelectorAll("img").length === 1;
 
+        const id = getUniqueLanternId();
+        el.setAttribute("data-lantern-id", id);
+
         if (alt === null) {
+          flaggedCount++;
           issues.push({
             rule_id: "img-alt-missing",
             category: "images",
@@ -180,14 +225,15 @@
             element: getReadableSnippet(el),
             selector: generateSelector(el),
             message: isSoleLinkContent
-              ? "Image inside link has no alt attribute, making the link invisible to screen readers."
+              ? "Image inside link has no alt attribute, making the link destination invisible to screen readers."
               : "Image is missing the required `alt` attribute.",
             how_to_fix: isSoleLinkContent
-              ? 'Add an alt attribute describing the destination link, e.g. alt="Go to Homepage".'
+              ? 'Add an alt attribute describing the link destination, e.g. alt="Go to Homepage".'
               : 'Add alt="descriptive text" describing the image content, or alt="" if purely decorative.',
             wcag_criteria: "1.1.1 Non-text Content (Level A)",
           });
         } else if (alt.trim() === "" && isSoleLinkContent) {
+          flaggedCount++;
           issues.push({
             rule_id: "img-alt-empty-link",
             category: "images",
@@ -195,11 +241,12 @@
             element_id: id,
             element: getReadableSnippet(el),
             selector: generateSelector(el),
-            message: "Image has empty alt=\"\" but is the only content inside a link.",
+            message: 'Image has empty alt="" but is the only content inside a link.',
             how_to_fix: 'Provide descriptive alt text for the link destination, e.g. alt="Home page".',
             wcag_criteria: "1.1.1 Non-text Content / 2.4.4 Link Purpose",
           });
-        } else if (genericAltPattern.test(alt.trim()) || fileExtAltPattern.test(alt.trim())) {
+        } else if (alt.trim() !== "" && (genericAltPattern.test(alt.trim()) || fileExtAltPattern.test(alt.trim()))) {
+          flaggedCount++;
           issues.push({
             rule_id: "img-alt-uninformative",
             category: "images",
@@ -216,26 +263,30 @@
         const hasAriaLabel = el.hasAttribute("aria-label") || el.hasAttribute("aria-labelledby");
         const hasTitleChild = Boolean(el.querySelector("title"));
         if (!hasAriaLabel && !hasTitleChild && role !== "presentation" && role !== "none") {
-          const id = getUniqueLanternId();
-          el.setAttribute("data-lantern-id", id);
-          issues.push({
-            rule_id: "svg-missing-accessible-name",
-            category: "images",
-            severity: "moderate",
-            element_id: id,
-            element: getReadableSnippet(el),
-            selector: generateSelector(el),
-            message: "SVG graphic has no accessible label or title.",
-            how_to_fix: 'Add aria-label="description" or a <title> element inside the SVG, or add aria-hidden="true" if decorative.',
-            wcag_criteria: "1.1.1 Non-text Content (Level A)",
-          });
+          const rect = el.getBoundingClientRect();
+          if (rect.width > 12 && rect.height > 12) {
+            flaggedCount++;
+            const id = getUniqueLanternId();
+            el.setAttribute("data-lantern-id", id);
+            issues.push({
+              rule_id: "svg-missing-accessible-name",
+              category: "images",
+              severity: "moderate",
+              element_id: id,
+              element: getReadableSnippet(el),
+              selector: generateSelector(el),
+              message: "SVG graphic has no accessible label or title.",
+              how_to_fix: 'Add aria-label="description" or a <title> element inside the SVG, or add aria-hidden="true" if decorative.',
+              wcag_criteria: "1.1.1 Non-text Content (Level A)",
+            });
+          }
         }
       }
-    });
+    }
   }
 
   function auditHeadings(issues) {
-    const headings = Array.from(document.querySelectorAll("h1, h2, h3, h4, h5, h6, [role='heading']")).filter(
+    const headings = querySelectorAllDeep("h1, h2, h3, h4, h5, h6, [role='heading']").filter(
       isElementVisible
     );
 
@@ -271,28 +322,12 @@
         element_id: id,
         element: getReadableSnippet(first),
         selector: generateSelector(first),
-        message: `Page is missing an <h1> main heading. Content begins with <${first.tagName.toLowerCase()}>.`,
+        message: `Page is missing an <h1> main heading. Headings start with <${first.tagName.toLowerCase()}>.`,
         how_to_fix: "Add an <h1> at the top of the main content area or promote the first heading to <h1>.",
         wcag_criteria: "1.3.1 Info and Relationships (Level A)",
       });
-    } else if (h1s.length > 2) {
-      const secondH1 = h1s[1];
-      const id = getUniqueLanternId();
-      secondH1.setAttribute("data-lantern-id", id);
-      issues.push({
-        rule_id: "heading-multiple-h1",
-        category: "headings",
-        severity: "minor",
-        element_id: id,
-        element: getReadableSnippet(secondH1),
-        selector: generateSelector(secondH1),
-        message: `Page has ${h1s.length} <h1> headings. Best practice is one primary <h1> per document.`,
-        how_to_fix: "Consider demoting secondary <h1> tags to <h2> sections for clearer outline hierarchy.",
-        wcag_criteria: "1.3.1 Info and Relationships (Best Practice)",
-      });
     }
 
-    // Check heading hierarchy skips
     let prevLevel = 0;
     headings.forEach((h) => {
       const text = (h.innerText || h.textContent || "").trim();
@@ -336,7 +371,7 @@
   }
 
   function auditForms(issues) {
-    const controls = document.querySelectorAll("input, select, textarea");
+    const controls = querySelectorAllDeep("input, select, textarea");
     const exemptTypes = new Set(["hidden", "submit", "button", "reset", "image"]);
 
     controls.forEach((el) => {
@@ -348,17 +383,14 @@
 
       const idAttr = el.id;
       let hasLabel = false;
-      let labelMethod = "";
 
       // 1. ARIA label or labelledby
       if (el.getAttribute("aria-label")?.trim()) {
         hasLabel = true;
-        labelMethod = "aria-label";
       } else if (el.getAttribute("aria-labelledby")?.trim()) {
         const labelEl = document.getElementById(el.getAttribute("aria-labelledby").trim());
         if (labelEl && (labelEl.innerText || labelEl.textContent || "").trim()) {
           hasLabel = true;
-          labelMethod = "aria-labelledby";
         }
       }
 
@@ -367,7 +399,6 @@
         const matchingLabel = document.querySelector(`label[for="${CSS.escape(idAttr)}"]`);
         if (matchingLabel && (matchingLabel.innerText || matchingLabel.textContent || "").trim()) {
           hasLabel = true;
-          labelMethod = "label-for";
         }
       }
 
@@ -376,14 +407,12 @@
         const parentLabel = el.closest("label");
         if (parentLabel && (parentLabel.innerText || parentLabel.textContent || "").trim()) {
           hasLabel = true;
-          labelMethod = "parent-label";
         }
       }
 
-      // 4. Title attribute (fallback)
+      // 4. Title attribute
       if (!hasLabel && el.getAttribute("title")?.trim()) {
         hasLabel = true;
-        labelMethod = "title";
       }
 
       const id = getUniqueLanternId();
@@ -420,7 +449,7 @@
     });
 
     // Buttons
-    const buttons = document.querySelectorAll("button, [role='button'], input[type='button'], input[type='submit']");
+    const buttons = querySelectorAllDeep("button, [role='button'], input[type='button'], input[type='submit']");
     buttons.forEach((btn) => {
       if (!isElementVisible(btn)) return;
       const text = (btn.innerText || btn.textContent || "").trim();
@@ -429,8 +458,9 @@
       const title = btn.getAttribute("title")?.trim();
       const value = btn.getAttribute("value")?.trim();
       const imgAlt = btn.querySelector("img")?.getAttribute("alt")?.trim();
+      const svgTitle = btn.querySelector("svg title")?.textContent?.trim();
 
-      if (!text && !ariaLabel && !ariaLabelledby && !title && !value && !imgAlt) {
+      if (!text && !ariaLabel && !ariaLabelledby && !title && !value && !imgAlt && !svgTitle) {
         const id = getUniqueLanternId();
         btn.setAttribute("data-lantern-id", id);
         issues.push({
@@ -449,9 +479,9 @@
   }
 
   function auditLinks(issues) {
-    const links = document.querySelectorAll("a[href]");
+    const links = querySelectorAllDeep("a[href]");
     const genericPhrases = new Set([
-      "click here", "click", "here", "read more", "more", "learn more", "link", "view", "details", "info", "continue"
+      "click here", "click", "here", "read more", "more", "learn more", "link", "view", "details", "continue"
     ]);
 
     links.forEach((a) => {
@@ -460,7 +490,6 @@
       const text = (a.innerText || a.textContent || "").trim().toLowerCase();
       const ariaLabel = (a.getAttribute("aria-label") || "").trim().toLowerCase();
       const effectiveText = ariaLabel || text;
-      const href = a.getAttribute("href")?.trim();
 
       const id = getUniqueLanternId();
       a.setAttribute("data-lantern-id", id);
@@ -486,43 +515,25 @@
           element: getReadableSnippet(a),
           selector: generateSelector(a),
           message: `Link uses generic text "${effectiveText}". Out of context, screen reader users cannot tell where it navigates.`,
-          how_to_fix: `Update the link text to describe its destination (e.g. "Read more about our pricing plans") or add aria-label="Read more about ...".`,
+          how_to_fix: `Update the link text to describe its destination or add aria-label="Read more about ...".`,
           wcag_criteria: "2.4.4 Link Purpose (In Context) (Level A)",
         });
-      }
-
-      if (href === "#" || href === "javascript:void(0)" || href === "javascript:;") {
-        if (!a.getAttribute("role")) {
-          issues.push({
-            rule_id: "link-fake-button",
-            category: "navigation",
-            severity: "minor",
-            element_id: id,
-            element: getReadableSnippet(a),
-            selector: generateSelector(a),
-            message: 'Anchor tag is used as a button (`href="#"` or javascript: pseudo-protocol) without button semantics.',
-            how_to_fix: 'Replace with a native <button type="button"> or add role="button" and keyboard handler.',
-            wcag_criteria: "4.1.2 Name, Role, Value",
-          });
-        }
       }
     });
   }
 
   function auditContrast(issues) {
-    // Audit text nodes across key elements
-    const candidates = document.querySelectorAll(
-      "p, span, h1, h2, h3, h4, h5, h6, a, button, label, li, td, th, blockquote"
+    const candidates = querySelectorAllDeep(
+      "p, span, h1, h2, h3, h4, h5, h6, a, button, label, li, td, th"
     );
 
     let contrastIssuesFound = 0;
-    const maxContrastIssues = 25; // prevent flooding on bad CSS pages
+    const maxContrastIssues = 30;
 
     for (let i = 0; i < candidates.length; i++) {
       if (contrastIssuesFound >= maxContrastIssues) break;
       const el = candidates[i];
 
-      // Only check elements with direct text
       const directText = Array.from(el.childNodes)
         .filter((n) => n.nodeType === Node.TEXT_NODE)
         .map((n) => n.textContent.trim())
@@ -539,7 +550,6 @@
       const effectiveFg = blendColors(fgParsed, effectiveBg);
       const ratio = getContrastRatio(effectiveFg, effectiveBg);
 
-      // Check if text is large (>= 18pt / 24px, or >= 14pt / 18.66px bold)
       const fontSizePx = parseFloat(style.fontSize);
       const fontWeight = parseInt(style.fontWeight, 10) || (style.fontWeight === "bold" ? 700 : 400);
       const isLarge = fontSizePx >= 24 || (fontSizePx >= 18.66 && fontWeight >= 700);
@@ -560,7 +570,7 @@
           element_id: id,
           element: getReadableSnippet(el),
           selector: generateSelector(el),
-          message: `Text contrast ratio is ${ratio.toFixed(2)}:1 (Text: ${fgHex} on Background: ${bgHex}). Minimum required is ${requiredRatio}:1.`,
+          message: `Text contrast ratio is ${ratio.toFixed(2)}:1 (${fgHex} on ${bgHex}). Minimum required is ${requiredRatio}:1.`,
           how_to_fix: `Adjust text color or background color to achieve at least ${requiredRatio}:1 contrast ratio.`,
           wcag_criteria: "1.4.3 Contrast (Minimum) (Level AA)",
         });
@@ -569,7 +579,6 @@
   }
 
   function auditDocumentMeta(issues) {
-    // 1. html lang
     const html = document.documentElement;
     const lang = html.getAttribute("lang");
     if (!lang || !lang.trim()) {
@@ -586,7 +595,6 @@
       });
     }
 
-    // 2. document title
     if (!document.title || !document.title.trim()) {
       issues.push({
         rule_id: "doc-missing-title",
@@ -601,7 +609,6 @@
       });
     }
 
-    // 3. Viewport zoom disabled
     const viewportMeta = document.querySelector('meta[name="viewport"]');
     if (viewportMeta) {
       const content = (viewportMeta.getAttribute("content") || "").toLowerCase();
@@ -613,48 +620,33 @@
           element_id: null,
           element: getReadableSnippet(viewportMeta),
           selector: 'meta[name="viewport"]',
-          message: "Viewport meta disables pinch-to-zoom (user-scalable=no or maximum-scale=1). Visually impaired users cannot zoom in.",
-          how_to_fix: "Remove user-scalable=no and maximum-scale constraints from <meta name=\"viewport\">.",
+          message: "Viewport meta disables pinch-to-zoom (user-scalable=no). Visually impaired users cannot zoom in.",
+          how_to_fix: "Remove user-scalable=no constraints from <meta name=\"viewport\">.",
           wcag_criteria: "1.4.4 Resize Text (Level AA)",
         });
       }
     }
-
-    // 4. Positive tabindex
-    const positiveTabindexes = document.querySelectorAll("[tabindex]");
-    positiveTabindexes.forEach((el) => {
-      const tabVal = parseInt(el.getAttribute("tabindex"), 10);
-      if (tabVal > 0) {
-        const id = getUniqueLanternId();
-        el.setAttribute("data-lantern-id", id);
-        issues.push({
-          rule_id: "keyboard-positive-tabindex",
-          category: "navigation",
-          severity: "serious",
-          element_id: id,
-          element: getReadableSnippet(el),
-          selector: generateSelector(el),
-          message: `Element has positive tabindex="${tabVal}". Positive tab indices break standard keyboard navigation order.`,
-          how_to_fix: "Set tabindex=\"0\" to place it in natural tab order, or use standard semantic interactive elements.",
-          wcag_criteria: "2.4.3 Focus Order (Level A)",
-        });
-      }
-    });
   }
 
-  // ── Calculate Accessibility Health Score ────────────────────────
+  // ── Realistic Rule-Capped Health Scoring ────────────────────────
   function calculateScore(issues) {
     let score = 100;
-    const deductions = {
-      critical: 12,
-      serious: 6,
-      moderate: 3,
-      minor: 1,
-    };
+    const ruleDeductions = {};
+    const severityWeights = { critical: 8, serious: 5, moderate: 2, minor: 1 };
+    const maxPerRule = { critical: 24, serious: 15, moderate: 8, minor: 4 };
+
     for (const issue of issues) {
-      score -= deductions[issue.severity] || 2;
+      const rid = issue.rule_id;
+      ruleDeductions[rid] = (ruleDeductions[rid] || 0) + (severityWeights[issue.severity] || 2);
     }
-    score = Math.max(0, Math.min(100, score));
+
+    for (const [rid, totalDeduction] of Object.entries(ruleDeductions)) {
+      const sample = issues.find((i) => i.rule_id === rid);
+      const cap = maxPerRule[sample?.severity || "moderate"] || 15;
+      score -= Math.min(totalDeduction, cap);
+    }
+
+    score = Math.max(0, Math.min(100, Math.round(score)));
 
     let grade = "A";
     if (score < 60) grade = "F";
@@ -665,7 +657,7 @@
     return { score, grade };
   }
 
-  // ── MAIN RUNNER ─────────────────────────────────────────────────
+  // ── Main Audit Function ─────────────────────────────────────────
   window.lanternRunAudit = function () {
     const startTime = performance.now();
     const issues = [];
@@ -701,7 +693,6 @@
     };
   };
 
-  // ── Message Listener ────────────────────────────────────────────
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "run-dom-audit") {
       try {
