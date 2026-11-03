@@ -1,8 +1,8 @@
 /**
  * Lantern – Popup Controller
  *
- * Manages Start Scan Screen with Privacy Consent, Interactive Filters,
- * In-Page Inspector Navigation, and CSV Report Export.
+ * Manages Start Scan Screen with Persistent Privacy Consent,
+ * Error Banner, In-Page Inspector Navigation, and CSV Report Export.
  */
 
 let currentReport = null;
@@ -18,6 +18,9 @@ const initialStateEl = document.getElementById("initial-state");
 const loadingStateEl = document.getElementById("loading-state");
 const loadingStepMsgEl = document.getElementById("loading-step-msg");
 const resultsDashboardEl = document.getElementById("results-dashboard");
+
+const errorBannerEl = document.getElementById("error-banner");
+const errorBannerTextEl = document.getElementById("error-banner-text");
 
 const siteBadgeEl = document.getElementById("site-badge");
 const welcomeSiteNameEl = document.getElementById("welcome-site-name");
@@ -44,9 +47,39 @@ const countMinorEl = document.getElementById("count-minor");
 const issueListEl = document.getElementById("issue-list");
 const emptyFilterMsgEl = document.getElementById("empty-filter-msg");
 
+// ── Resilient Active Tab Finder ─────────────────────────────────────
+async function getActiveTab() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+    if (tab && tab.id) return tab;
+  } catch (e) {}
+
+  try {
+    const [currentTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (currentTab && currentTab.id) return currentTab;
+  } catch (e) {}
+
+  return null;
+}
+
+function showError(msg) {
+  loadingStateEl.classList.add("hidden");
+  initialStateEl.classList.remove("hidden");
+  if (errorBannerEl && errorBannerTextEl) {
+    errorBannerTextEl.textContent = msg;
+    errorBannerEl.classList.remove("hidden");
+  }
+}
+
+function hideError() {
+  if (errorBannerEl) {
+    errorBannerEl.classList.add("hidden");
+  }
+}
+
 // ── Initialization ──────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", async () => {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const tab = await getActiveTab();
   if (tab) {
     activeTabId = tab.id;
     try {
@@ -54,6 +87,18 @@ document.addEventListener("DOMContentLoaded", async () => {
       currentHostname = urlObj.hostname || "local page";
     } catch (e) {
       currentHostname = "local page";
+    }
+
+    // Warn if on internal chrome:// or extension settings page
+    const url = tab.url || "";
+    if (
+      url.startsWith("chrome://") ||
+      url.startsWith("chrome-extension://") ||
+      url.startsWith("edge://") ||
+      url.startsWith("about:")
+    ) {
+      showError("Cannot audit internal browser pages. Please open a website (like YouTube, Wikipedia, or a local page) and reopen Lantern.");
+      startScanBtn.disabled = true;
     }
   }
 
@@ -66,7 +111,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Check persistent privacy agreement in chrome.storage.local
   chrome.storage.local.get(["lantern_privacy_agreed"], (result) => {
     if (result && result.lantern_privacy_agreed) {
-      // User has agreed once: hide the roadblock card, show subtle badge
       if (privacyCardEl) privacyCardEl.classList.add("hidden");
       if (privacyAgreedBadgeEl) privacyAgreedBadgeEl.classList.remove("hidden");
       startScanBtn.disabled = false;
@@ -80,8 +124,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // Start & Rescan buttons
+  // Start Scan button click
   startScanBtn.addEventListener("click", () => {
+    hideError();
     // Remember consent permanently
     chrome.storage.local.set({ lantern_privacy_agreed: true });
     triggerScan();
@@ -155,7 +200,26 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 // ── Trigger Scan with Step Feedback ─────────────────────────────────
 async function triggerScan() {
-  if (!activeTabId) return;
+  hideError();
+
+  // Ensure active tab is resolved
+  const tab = await getActiveTab();
+  if (!tab || !tab.id) {
+    showError("No active web page detected. Please open a webpage and try again.");
+    return;
+  }
+  activeTabId = tab.id;
+
+  const url = tab.url || "";
+  if (
+    url.startsWith("chrome://") ||
+    url.startsWith("chrome-extension://") ||
+    url.startsWith("edge://") ||
+    url.startsWith("about:")
+  ) {
+    showError("Cannot audit internal browser pages. Please open any web page (http://, https://, or file://).");
+    return;
+  }
 
   initialStateEl.classList.add("hidden");
   resultsDashboardEl.classList.add("hidden");
@@ -180,15 +244,18 @@ async function triggerScan() {
     { action: "scan-page", tabId: activeTabId },
     (response) => {
       clearInterval(stepInterval);
-      loadingStateEl.classList.add("hidden");
 
-      if (!response || !response.success) {
-        initialStateEl.classList.remove("hidden");
-        const msg = response?.error || "Could not complete scan.";
-        alert(`Audit Error: ${msg}`);
+      if (chrome.runtime.lastError) {
+        showError(`Extension Communication Error: ${chrome.runtime.lastError.message}`);
         return;
       }
 
+      if (!response || !response.success) {
+        showError(response?.error || "Could not complete scan on this webpage.");
+        return;
+      }
+
+      loadingStateEl.classList.add("hidden");
       currentReport = response.data;
       renderDashboard(currentReport);
 
@@ -275,7 +342,7 @@ function renderFilteredIssues() {
         ${
           issue.element_id
             ? `<button class="inspect-btn" data-element-id="${escapeHtml(issue.element_id)}" title="Scroll & Inspect Element">
-                <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
+                <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
                 <span>Inspect</span>
                </button>`
             : ""
