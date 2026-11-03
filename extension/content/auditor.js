@@ -3,7 +3,7 @@
  *
  * Runs directly in the live webpage context to audit ANY website:
  * - Traverses Shadow DOM roots (YouTube, Polymer, Web Components, Custom Elements)
- * - Details Categories: Errors, Contrast Errors, Alerts, Features (positive!), Structure, ARIA
+ * - Details Categories: Errors, Contrast Errors, Alerts, Features, Structure, ARIA
  * - Tab 3 Order: Keyboard focus order analysis & positive tabindex detection
  * - Tab 4 Structure: Hierarchical heading & landmark outline tree
  * - Tab 5 Contrast: Live computed contrast, WCAG AA/AAA compliance, & automated color suggestions
@@ -19,39 +19,45 @@
     return `lantern-node-${Date.now()}-${issueCounter}`;
   }
 
-  // ── Deep Shadow-DOM Element Querying ────────────────────────────
+  // ── Ultra-Fast Deep Shadow-DOM Element Querying ─────────────────
   function querySelectorAllDeep(selector, root = document) {
     const results = [];
-    function traverse(node) {
-      if (!node) return;
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        // Ignore Lantern's own UI elements
-        if (
-          node.classList &&
-          (node.classList.contains("lantern-injected-badge") ||
-            node.classList.contains("lantern-interactive-tooltip") ||
-            node.classList.contains("lantern-order-badge") ||
-            node.id === "lantern-core-styles")
-        ) {
-          return;
-        }
+    const rootsToSearch = [root];
+    const visitedRoots = new Set();
 
-        try {
-          if (node.matches && node.matches(selector)) {
-            results.push(node);
+    while (rootsToSearch.length > 0) {
+      const current = rootsToSearch.shift();
+      if (!current || visitedRoots.has(current)) continue;
+      visitedRoots.add(current);
+
+      // 1. Native query on this root
+      try {
+        const matches = current.querySelectorAll(selector);
+        for (let i = 0; i < matches.length; i++) {
+          const el = matches[i];
+          if (
+            !el.id?.startsWith("lantern-") &&
+            !el.classList?.contains("lantern-injected-badge") &&
+            !el.classList?.contains("lantern-injected-overlay") &&
+            !el.classList?.contains("lantern-interactive-tooltip") &&
+            !el.classList?.contains("lantern-order-badge")
+          ) {
+            results.push(el);
           }
-        } catch (e) {}
-
-        if (node.shadowRoot) {
-          traverse(node.shadowRoot);
         }
-      }
-      const children = node.children || [];
-      for (let i = 0; i < children.length; i++) {
-        traverse(children[i]);
-      }
+      } catch (e) {}
+
+      // 2. Discover open shadow roots inside this root
+      try {
+        const allElements = current.querySelectorAll("*");
+        for (let i = 0; i < allElements.length; i++) {
+          if (allElements[i].shadowRoot) {
+            rootsToSearch.push(allElements[i].shadowRoot);
+          }
+        }
+      } catch (e) {}
     }
-    traverse(root);
+
     return results;
   }
 
@@ -63,23 +69,22 @@
     if (el.closest("template, noscript, [inert]")) return false;
     if (el.hasAttribute("hidden")) return false;
 
-    // Filter out elements hidden from assistive tech
-    if (el.closest('[aria-hidden="true"]')) return false;
+    // Filter out elements hidden explicitly with aria-hidden="true"
+    if (el.getAttribute("aria-hidden") === "true") return false;
 
-    const style = window.getComputedStyle(el);
-    if (
-      style.display === "none" ||
-      style.visibility === "hidden" ||
-      parseFloat(style.opacity) === 0
-    ) {
-      return false;
-    }
+    try {
+      const style = window.getComputedStyle(el);
+      if (
+        style.display === "none" ||
+        style.visibility === "hidden" ||
+        parseFloat(style.opacity) === 0
+      ) {
+        return false;
+      }
+    } catch (e) {}
 
-    const rect = el.getBoundingClientRect();
-    if (rect.width <= 1 && rect.height <= 1) {
-      return false;
-    }
-
+    // Note: Do not discard elements with width/height 0 if they are links, buttons, or images,
+    // because empty links/buttons and missing alt images ARE the accessibility violations!
     return true;
   }
 
@@ -127,11 +132,9 @@
 
   function getAccessibleName(el) {
     if (!el) return "";
-    // 1. aria-label
     if (el.getAttribute("aria-label")?.trim()) {
       return el.getAttribute("aria-label").trim();
     }
-    // 2. aria-labelledby
     if (el.getAttribute("aria-labelledby")?.trim()) {
       const ids = el.getAttribute("aria-labelledby").trim().split(/\s+/);
       const textParts = ids
@@ -139,12 +142,10 @@
         .filter(Boolean);
       if (textParts.length) return textParts.join(" ").trim();
     }
-    // 3. title or alt or value
     if (el.getAttribute("title")?.trim()) return el.getAttribute("title").trim();
     if (el.getAttribute("alt")?.trim()) return el.getAttribute("alt").trim();
     if (el.getAttribute("value")?.trim()) return el.getAttribute("value").trim();
     if (el.getAttribute("placeholder")?.trim()) return el.getAttribute("placeholder").trim();
-    // 4. innerText or textContent
     const inner = (el.innerText || el.textContent || "").trim();
     if (inner) return inner.slice(0, 50);
     return "";
@@ -185,12 +186,14 @@
     const bgStack = [];
 
     while (curr && curr.nodeType === Node.ELEMENT_NODE) {
-      const style = window.getComputedStyle(curr);
-      const parsed = parseRgba(style.backgroundColor);
-      if (parsed && parsed.a > 0) {
-        bgStack.unshift(parsed);
-        if (parsed.a === 1.0) break;
-      }
+      try {
+        const style = window.getComputedStyle(curr);
+        const parsed = parseRgba(style.backgroundColor);
+        if (parsed && parsed.a > 0) {
+          bgStack.unshift(parsed);
+          if (parsed.a === 1.0) break;
+        }
+      } catch (e) {}
       curr = curr.parentElement;
     }
 
@@ -267,13 +270,6 @@
       if (isAriaHidden || hasPresentationRole) continue;
 
       if (tag === "img") {
-        const src = (el.getAttribute("src") || "").trim();
-        const dataSrc = el.getAttribute("data-src");
-        const srcset = el.getAttribute("srcset");
-
-        if (!src && !dataSrc && !srcset) continue;
-        if (src.includes("data:image/gif;base64,R0lGODlhAQAB")) continue;
-
         const alt = el.getAttribute("alt");
         const parentLink = el.closest("a");
         const isSoleLinkContent =
@@ -281,7 +277,7 @@
           (parentLink.innerText || parentLink.textContent || "").trim() === "" &&
           parentLink.querySelectorAll("img").length === 1;
 
-        const id = getUniqueLanternId();
+        const id = el.getAttribute("data-lantern-id") || getUniqueLanternId();
         el.setAttribute("data-lantern-id", id);
 
         if (alt === null) {
@@ -331,7 +327,6 @@
             wcag_criteria: "1.1.1 Non-text Content (Level A)",
           });
         } else if (alt.trim().length > 2 && features.length < 25) {
-          // Positive feature!
           features.push({
             rule_id: "feature-alt-text",
             category: "images",
@@ -349,24 +344,20 @@
         const hasAriaLabel = el.hasAttribute("aria-label") || el.hasAttribute("aria-labelledby");
         const hasTitleChild = Boolean(el.querySelector("title"));
         if (!hasAriaLabel && !hasTitleChild && role !== "presentation" && role !== "none") {
-          const rect = el.getBoundingClientRect();
-          if (rect.width > 12 && rect.height > 12) {
-            flaggedCount++;
-            const id = getUniqueLanternId();
-            el.setAttribute("data-lantern-id", id);
-            issues.push({
-              rule_id: "svg-missing-accessible-name",
-              category: "images",
-              wave_category: "alerts",
-              severity: "moderate",
-              element_id: id,
-              element: getReadableSnippet(el),
-              selector: generateSelector(el),
-              message: "SVG graphic has no accessible label or title.",
-              how_to_fix: 'Add aria-label="description" or a <title> element inside the SVG, or add aria-hidden="true" if decorative.',
-              wcag_criteria: "1.1.1 Non-text Content (Level A)",
-            });
-          }
+          const id = el.getAttribute("data-lantern-id") || getUniqueLanternId();
+          el.setAttribute("data-lantern-id", id);
+          issues.push({
+            rule_id: "svg-missing-accessible-name",
+            category: "images",
+            wave_category: "alerts",
+            severity: "moderate",
+            element_id: id,
+            element: getReadableSnippet(el),
+            selector: generateSelector(el),
+            message: "SVG graphic has no accessible label or title.",
+            how_to_fix: 'Add aria-label="description" or a <title> element inside the SVG, or add aria-hidden="true" if decorative.',
+            wcag_criteria: "1.1.1 Non-text Content (Level A)",
+          });
         }
       }
     }
@@ -401,7 +392,7 @@
 
     if (h1s.length === 0) {
       const first = headings[0];
-      const id = getUniqueLanternId();
+      const id = first.getAttribute("data-lantern-id") || getUniqueLanternId();
       first.setAttribute("data-lantern-id", id);
       issues.push({
         rule_id: "heading-missing-h1",
@@ -489,7 +480,6 @@
       let hasLabel = false;
       let labelType = "";
 
-      // 1. ARIA label or labelledby
       if (el.getAttribute("aria-label")?.trim()) {
         hasLabel = true;
         labelType = "aria-label";
@@ -501,7 +491,6 @@
         }
       }
 
-      // 2. <label for="...">
       if (!hasLabel && idAttr) {
         const matchingLabel = document.querySelector(`label[for="${CSS.escape(idAttr)}"]`);
         if (matchingLabel && (matchingLabel.innerText || matchingLabel.textContent || "").trim()) {
@@ -510,7 +499,6 @@
         }
       }
 
-      // 3. Wrapping <label>
       if (!hasLabel) {
         const parentLabel = el.closest("label");
         if (parentLabel && (parentLabel.innerText || parentLabel.textContent || "").trim()) {
@@ -519,13 +507,12 @@
         }
       }
 
-      // 4. Title attribute
       if (!hasLabel && el.getAttribute("title")?.trim()) {
         hasLabel = true;
         labelType = "title";
       }
 
-      const id = getUniqueLanternId();
+      const id = el.getAttribute("data-lantern-id") || getUniqueLanternId();
       el.setAttribute("data-lantern-id", id);
 
       if (!hasLabel) {
@@ -634,7 +621,6 @@
       const id = a.getAttribute("data-lantern-id") || getUniqueLanternId();
       a.setAttribute("data-lantern-id", id);
 
-      // Check for Skip Link feature
       const href = a.getAttribute("href") || "";
       if (href.startsWith("#") && (text.includes("skip") || ariaLabel.includes("skip"))) {
         features.push({
@@ -683,25 +669,30 @@
 
   function auditContrastAndBuildItems(issues) {
     const candidates = querySelectorAllDeep(
-      "p, span, h1, h2, h3, h4, h5, h6, a, button, label, li, td, th"
+      "p, span, h1, h2, h3, h4, h5, h6, a, button, label, li, td, th, div"
     );
 
     let contrastIssuesFound = 0;
-    const maxContrastIssues = 30;
+    const maxContrastIssues = 35;
     const contrastItems = [];
 
     for (let i = 0; i < candidates.length; i++) {
       const el = candidates[i];
 
-      const directText = Array.from(el.childNodes)
-        .filter((n) => n.nodeType === Node.TEXT_NODE)
-        .map((n) => n.textContent.trim())
-        .join(" ");
-
-      if (!directText || directText.length < 2) continue;
+      // Find text content
+      const text = (el.innerText || el.textContent || "").trim();
+      if (!text || text.length < 2) continue;
+      // Skip large containers that have many child elements
+      if (el.children && el.children.length > 3) continue;
       if (!isElementVisible(el)) continue;
 
-      const style = window.getComputedStyle(el);
+      let style;
+      try {
+        style = window.getComputedStyle(el);
+      } catch (e) {
+        continue;
+      }
+
       const fgParsed = parseRgba(style.color);
       if (!fgParsed || fgParsed.a === 0) continue;
 
@@ -709,7 +700,7 @@
       const effectiveFg = blendColors(fgParsed, effectiveBg);
       const ratio = getContrastRatio(effectiveFg, effectiveBg);
 
-      const fontSizePx = parseFloat(style.fontSize);
+      const fontSizePx = parseFloat(style.fontSize) || 16;
       const fontWeight = parseInt(style.fontWeight, 10) || (style.fontWeight === "bold" ? 700 : 400);
       const isLarge = fontSizePx >= 24 || (fontSizePx >= 18.66 && fontWeight >= 700);
       const requiredRatioAA = isLarge ? 3.0 : 4.5;
@@ -728,7 +719,7 @@
 
       const item = {
         element_id: id,
-        text: directText.slice(0, 60),
+        text: text.slice(0, 60),
         element: getReadableSnippet(el),
         selector: generateSelector(el),
         fg_hex: fgHex,
@@ -764,7 +755,6 @@
       }
     }
 
-    // Sort contrastItems so failing items appear first
     contrastItems.sort((a, b) => (a.passes_aa === b.passes_aa ? a.ratio - b.ratio : a.passes_aa ? 1 : -1));
     return contrastItems;
   }
@@ -849,7 +839,6 @@
       let tabindexNum = rawTabindex !== null ? parseInt(rawTabindex, 10) : 0;
       if (isNaN(tabindexNum)) tabindexNum = 0;
 
-      // -1 means focusable programmatically, not via Tab key
       if (tabindexNum < 0) return;
 
       const id = el.getAttribute("data-lantern-id") || getUniqueLanternId();
@@ -883,9 +872,6 @@
       });
     });
 
-    // Sort order according to HTML specification for Sequential Focus Navigation:
-    // 1. Elements with tabindex > 0, ordered by tabindex value asc, then DOM order
-    // 2. Elements with tabindex = 0 or natural focus in DOM order
     const positiveGroup = validElements
       .filter((item) => item.tabindex > 0)
       .sort((a, b) => (a.tabindex === b.tabindex ? a.dom_order - b.dom_order : a.tabindex - b.tabindex));
@@ -988,7 +974,7 @@
       ariaList.push({
         element_id: id,
         tag: el.tagName.toLowerCase(),
-        attributes: desc.join(", "),
+        attributes: desc.join(", ") || "aria",
         element: getReadableSnippet(el),
         selector: generateSelector(el),
       });
@@ -1026,21 +1012,25 @@
     return { score, grade };
   }
 
-  // ── Main Audit Function ─────────────────────────────────────────
+  // ── Main Audit Function (Protected with try-catches) ─────────────
   window.lanternRunAudit = function () {
     const startTime = performance.now();
     const issues = [];
     const features = [];
+    let contrastItems = [];
+    let focusOrder = [];
+    let structureTree = [];
+    let ariaElements = [];
 
-    auditDocumentMeta(issues, features);
-    auditImages(issues, features);
-    auditHeadings(issues, features);
-    auditForms(issues, features);
-    auditLinks(issues, features);
-    const contrastItems = auditContrastAndBuildItems(issues);
-    const focusOrder = buildFocusOrder(issues);
-    const structureTree = buildStructureTree();
-    const ariaElements = extractAriaElements();
+    try { auditDocumentMeta(issues, features); } catch (e) { console.error("Lantern meta audit error:", e); }
+    try { auditImages(issues, features); } catch (e) { console.error("Lantern images audit error:", e); }
+    try { auditHeadings(issues, features); } catch (e) { console.error("Lantern headings audit error:", e); }
+    try { auditForms(issues, features); } catch (e) { console.error("Lantern forms audit error:", e); }
+    try { auditLinks(issues, features); } catch (e) { console.error("Lantern links audit error:", e); }
+    try { contrastItems = auditContrastAndBuildItems(issues); } catch (e) { console.error("Lantern contrast audit error:", e); }
+    try { focusOrder = buildFocusOrder(issues); } catch (e) { console.error("Lantern focus order error:", e); }
+    try { structureTree = buildStructureTree(); } catch (e) { console.error("Lantern structure tree error:", e); }
+    try { ariaElements = extractAriaElements(); } catch (e) { console.error("Lantern ARIA elements error:", e); }
 
     // Summary calculation
     const summary = { critical: 0, serious: 0, moderate: 0, minor: 0 };

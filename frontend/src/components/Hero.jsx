@@ -1,65 +1,77 @@
 import React from 'react';
+import { Compass, Download } from 'lucide-react';
+import FluidMatrixBackground from './FluidMatrixBackground';
 
-export default function Hero({ onSelectSample }) {
+export default function Hero({ onStartAudit }) {
   return (
-    <section className="relative overflow-hidden pt-12 pb-10 bg-gradient-to-b from-amber-50/20 via-white to-slate-50 border-b border-slate-200/60">
-      {/* Background ambient lighting centered */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-72 bg-amber-100/30 rounded-full blur-3xl pointer-events-none -z-10" />
+    <section className="relative overflow-hidden pt-12 pb-16 bg-[#070D1E] text-white">
+      
+      {/* Fluid Dynamic Matrix Wave Background from Reference Image */}
+      <FluidMatrixBackground />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center text-center">
+      {/* Content Container */}
+      <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center text-center">
         
-        {/* Official Brand Logo Centered */}
+        {/* Brand Logo Centered */}
         <div className="flex items-center justify-center mb-5">
           <img 
             src="/lantern-logo.png" 
             alt="Lantern" 
-            className="h-16 sm:h-20 w-auto object-contain drop-shadow-xs"
+            className="h-24 sm:h-32 md:h-36 w-auto object-contain drop-shadow-2xl"
           />
         </div>
 
-        {/* Exact Title: Make the Web Accessible to Everyone. */}
-        <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.08] text-slate-950">
-          Make the Web{' '}
-          <span style={{ color: '#F28C28' }}>Accessible</span>
-          <span className="block" style={{ color: '#F28C28' }}>
-            to Everyone.
+        {/* Scaled-down Title matching logo font:
+            "Illuminate the " (white) + "Web." (italic orange)
+            "Debug " (white) + "Accessibility." (italic orange) */}
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-[1.18] font-sans">
+          <span className="text-white">Illuminate the </span>
+          <span className="italic" style={{ color: '#F28C28' }}>Web.</span>
+          <span className="block mt-1 sm:mt-1.5">
+            <span className="text-white">Debug </span>
+            <span className="italic" style={{ color: '#F28C28' }}>Accessibility.</span>
           </span>
         </h1>
 
-        {/* Clean, Focused Subtitle */}
-        <p className="mt-4 text-base sm:text-lg text-slate-600 leading-relaxed max-w-xl mx-auto font-normal">
+        {/* Minimal Subtitle */}
+        <p className="mt-3.5 text-xs sm:text-sm md:text-base text-slate-300 leading-relaxed max-w-md mx-auto font-normal">
           Instant WCAG 2.1 diagnostics and copy-paste code fixes for developers.
         </p>
 
-        {/* Centered Quick Test Suite Pills */}
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1">
-            Quick Test:
-          </span>
+        {/* Two Action Boxes (Start Audit & Download Extension) */}
+        <div className="mt-7 flex flex-col sm:flex-row items-center justify-center gap-3.5 w-full max-w-md">
+          
+          {/* Box 1: Start Audit */}
           <button
-            onClick={() => onSelectSample('broken-bakery')}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-300 hover:border-[#F28C28] hover:bg-amber-50 text-slate-700 hover:text-amber-900 shadow-2xs transition-all cursor-pointer"
+            onClick={onStartAudit}
+            className="w-full sm:w-1/2 p-3.5 rounded-xl bg-[#F28C28] hover:bg-[#e07d1e] text-slate-950 font-black text-xs sm:text-sm shadow-xl shadow-orange-500/20 hover:shadow-orange-500/30 transition-all flex items-center justify-center gap-2.5 cursor-pointer group"
           >
-            <span className="w-2 h-2 rounded-full bg-rose-500"></span>
-            Broken Bakery (Baseline)
+            <Compass className="w-4 h-4 text-slate-950 group-hover:rotate-45 transition-transform" />
+            <div className="text-left">
+              <span className="block leading-none font-black">Start Audit</span>
+              <span className="block text-[10px] font-medium text-slate-900/80 mt-1">Scan URL or HTML</span>
+            </div>
           </button>
-          <button
-            onClick={() => onSelectSample('greenleaf-bad')}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-300 hover:border-[#F28C28] hover:bg-amber-50 text-slate-700 hover:text-amber-900 shadow-2xs transition-all cursor-pointer"
+
+          {/* Box 2: Download Extension */}
+          <a
+            href="/lantern-extension.zip"
+            download="lantern-extension.zip"
+            className="w-full sm:w-1/2 p-3.5 rounded-xl bg-slate-900/80 hover:bg-slate-800/90 text-white border border-slate-700/80 hover:border-[#F28C28] shadow-xl backdrop-blur-md transition-all flex items-center justify-center gap-2.5 cursor-pointer group"
           >
-            <span className="w-2 h-2 rounded-full bg-orange-500"></span>
-            GreenLeaf Café (Flawed)
-          </button>
-          <button
-            onClick={() => onSelectSample('greenleaf-good')}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-300 hover:border-emerald-500 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 shadow-2xs transition-all cursor-pointer"
-          >
-            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-            GreenLeaf Café (Fixed A+)
-          </button>
+            <Download className="w-4 h-4 text-[#F28C28] group-hover:translate-y-0.5 transition-transform" />
+            <div className="text-left">
+              <span className="block leading-none font-black text-white">Download Extension</span>
+              <span className="block text-[10px] font-medium text-slate-400 mt-1">Chrome Manifest V3</span>
+            </div>
+          </a>
+
         </div>
 
       </div>
+
+      {/* Subtle bottom fade into page */}
+      <div className="absolute bottom-0 inset-x-0 h-10 bg-gradient-to-t from-slate-50 to-transparent pointer-events-none" />
     </section>
   );
 }

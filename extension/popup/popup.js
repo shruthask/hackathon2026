@@ -459,13 +459,21 @@ function renderDashboard(report) {
   countModerateEl.textContent = report.summary?.moderate || 0;
   countMinorEl.textContent = report.summary?.minor || 0;
 
-  // Category counts in Tab 1
+  // Category counts in Tab 1 (with bulletproof fallback)
   const cats = report.details_categories || {};
-  document.getElementById("count-all-issues").textContent = report.total_issues || 0;
-  document.getElementById("count-cat-errors").textContent = cats.errors?.length || 0;
-  document.getElementById("count-cat-contrast").textContent = cats.contrast_errors?.length || 0;
-  document.getElementById("count-cat-alerts").textContent = cats.alerts?.length || 0;
-  document.getElementById("count-cat-features").textContent = report.features?.length || 0;
+  const issues = report.issues || [];
+  const features = report.features || [];
+
+  const errorsList = cats.errors?.length ? cats.errors : issues.filter(i => i.wave_category === "errors" || i.severity === "critical");
+  const contrastList = cats.contrast_errors?.length ? cats.contrast_errors : issues.filter(i => i.wave_category === "contrast_errors" || i.category === "contrast");
+  const alertsList = cats.alerts?.length ? cats.alerts : issues.filter(i => (i.wave_category === "alerts" || i.severity === "serious" || i.severity === "moderate") && i.category !== "contrast" && i.severity !== "critical");
+  const featuresList = features.length ? features : issues.filter(i => i.severity === "feature" || i.wave_category === "features");
+
+  document.getElementById("count-all-issues").textContent = report.total_issues || issues.length;
+  document.getElementById("count-cat-errors").textContent = errorsList.length;
+  document.getElementById("count-cat-contrast").textContent = contrastList.length;
+  document.getElementById("count-cat-alerts").textContent = alertsList.length;
+  document.getElementById("count-cat-features").textContent = featuresList.length;
   document.getElementById("count-cat-structure").textContent = report.structure_tree?.length || 0;
   document.getElementById("count-cat-aria").textContent = report.aria_elements?.length || 0;
 
@@ -482,18 +490,26 @@ function renderDetailsItems() {
   listEl.innerHTML = "";
 
   const cats = currentReport.details_categories || {};
+  const issues = currentReport.issues || [];
+  const features = currentReport.features || [];
+
+  const errorsList = cats.errors?.length ? cats.errors : issues.filter(i => i.wave_category === "errors" || i.severity === "critical");
+  const contrastList = cats.contrast_errors?.length ? cats.contrast_errors : issues.filter(i => i.wave_category === "contrast_errors" || i.category === "contrast");
+  const alertsList = cats.alerts?.length ? cats.alerts : issues.filter(i => (i.wave_category === "alerts" || i.severity === "serious" || i.severity === "moderate") && i.category !== "contrast" && i.severity !== "critical");
+  const featuresList = features.length ? features : issues.filter(i => i.severity === "feature" || i.wave_category === "features");
+
   let itemsToRender = [];
 
   if (currentDetailsCategory === "all") {
-    itemsToRender = [...currentReport.issues, ...(currentReport.features || [])];
+    itemsToRender = [...issues, ...featuresList];
   } else if (currentDetailsCategory === "errors") {
-    itemsToRender = cats.errors || [];
+    itemsToRender = errorsList;
   } else if (currentDetailsCategory === "contrast_errors") {
-    itemsToRender = cats.contrast_errors || [];
+    itemsToRender = contrastList;
   } else if (currentDetailsCategory === "alerts") {
-    itemsToRender = cats.alerts || [];
+    itemsToRender = alertsList;
   } else if (currentDetailsCategory === "features") {
-    itemsToRender = currentReport.features || [];
+    itemsToRender = featuresList;
   } else if (currentDetailsCategory === "structure") {
     itemsToRender = (currentReport.structure_tree || []).map((s) => ({
       rule_id: `structure-${s.type}`,
@@ -547,7 +563,7 @@ function renderDetailsItems() {
       <p class="card-message">${escapeHtml(item.message || "")}</p>
       ${item.element ? `<div class="card-snippet">${escapeHtml(item.element)}</div>` : ""}
       <div class="card-fix-box">
-        <div class="card-fix-title">${isFeature ? "✓ Benefit:" : "💡 Suggested Fix:"}</div>
+        <div class="card-fix-title">${isFeature ? "Benefit:" : "Suggested Fix:"}</div>
         <div>${escapeHtml(item.how_to_fix || "")}</div>
       </div>
       <div class="card-footer-row">
@@ -633,11 +649,17 @@ function renderReferenceRulebook() {
       </div>
       <div class="ref-examples-grid">
         <div class="ref-code-box ref-code-bad">
-          <span class="ref-code-title">❌ Incorrect Implementation</span>
+          <span class="ref-code-title">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:3px;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            Incorrect Implementation
+          </span>
           <code>${escapeHtml(rule.badHtml)}</code>
         </div>
         <div class="ref-code-box ref-code-good">
-          <span class="ref-code-title">✓ Correct Implementation</span>
+          <span class="ref-code-title">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:3px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            Correct Implementation
+          </span>
           <code>${escapeHtml(rule.goodHtml)}</code>
         </div>
       </div>
@@ -749,7 +771,7 @@ function renderStructureTab() {
     div.innerHTML = `
       <span class="struct-badge ${badgeClass}">${badgeLabel}</span>
       <span class="struct-text" title="${escapeHtml(node.text)}">${escapeHtml(node.text)}</span>
-      ${node.skipped_level ? `<span class="struct-skip-warning">⚠️ Level Skipped</span>` : ""}
+      ${node.skipped_level ? `<span class="struct-skip-warning"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:2px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Level Skipped</span>` : ""}
     `;
 
     div.addEventListener("click", () => {
@@ -810,7 +832,7 @@ function renderContrastTab() {
       ${
         !item.passes_aa && item.suggested_color
           ? `<div class="contrast-suggest-box">
-              <span class="suggest-text">💡 Suggested accessible color: <strong>${item.suggested_color}</strong> (${item.suggested_ratio}:1)</span>
+              <span class="suggest-text">Suggested accessible color: <strong>${item.suggested_color}</strong> (${item.suggested_ratio}:1)</span>
               <button class="suggest-copy-btn" data-color="${item.suggested_color}">Copy Hex</button>
             </div>`
           : ""

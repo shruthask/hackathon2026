@@ -2,13 +2,13 @@
  * Lantern – Interactive In-Page Element Highlighter & Inspector (WAVE-Inspired)
  *
  * High-visibility visual overlay system that highlights accessibility violations,
- * features, and keyboard focus order across ANY website and Shadow DOM:
- * - Traverses open Shadow DOM roots to find flagged elements
- * - Direct inline style fallback so highlights display even if CSP blocks stylesheets
- * - Distinct visual indicator badges for Errors, Alerts, and Positive Features
- * - Tab 3 Sequential Numbered Order Pins on focusable elements
- * - Styles ON/OFF toggle without breaking Lantern overlays
- * - Interactive tooltips with code snippets, suggested fixes, and 1-click copy
+ * positive features, and keyboard focus order across ANY website and Shadow DOM:
+ * - Direct inline style outline + glowing halo
+ * - Document-level floating overlay frames that never get clipped by overflow:hidden
+ * - Distinct visual indicator badge pins with theme-matching SVGs
+ * - Sequential numbered order pins for Tab 3 Order inspection
+ * - Smooth scroll, pulse animation, and interactive tooltip cards
+ * - Styles ON/OFF toggle that preserves Lantern overlays
  */
 
 (function () {
@@ -26,7 +26,6 @@
   let activeFocusOrder = [];
   let isHighlightsVisible = true;
   let activeTooltip = null;
-  let stylesDisabled = false;
 
   // ── Inject Guaranteed Fallback CSS into Head ────────────────────
   function ensureHighlightStylesInjected() {
@@ -80,7 +79,7 @@
         } catch (e) {}
       }
 
-      // 3. Search children's shadow roots recursively
+      // 3. Search children's shadow roots
       const children = root.querySelectorAll ? root.querySelectorAll("*") : [];
       for (let i = 0; i < children.length; i++) {
         if (children[i].shadowRoot) {
@@ -92,6 +91,18 @@
     }
 
     return search(document);
+  }
+
+  function getElementPageCoordinates(el) {
+    const rect = el.getBoundingClientRect();
+    const docRect = document.documentElement.getBoundingClientRect();
+    return {
+      top: rect.top - docRect.top,
+      left: rect.left - docRect.left,
+      width: rect.width || el.offsetWidth || 20,
+      height: rect.height || el.offsetHeight || 20,
+      rawRect: rect,
+    };
   }
 
   function removeTooltip() {
@@ -141,6 +152,9 @@
     document.querySelectorAll(".lantern-injected-badge").forEach((el) => {
       el.style.display = displayVal;
     });
+    document.querySelectorAll(".lantern-injected-overlay").forEach((el) => {
+      el.style.display = displayVal;
+    });
 
     function toggleRoot(root) {
       if (!root) return;
@@ -169,9 +183,6 @@
 
   // ── Styles ON/OFF Toggle Feature ─────────────────────────────────
   window.lanternToggleStyles = function (enable) {
-    stylesDisabled = !enable;
-
-    // Toggle document.styleSheets
     for (let i = 0; i < document.styleSheets.length; i++) {
       const sheet = document.styleSheets[i];
       try {
@@ -180,7 +191,6 @@
       } catch (e) {}
     }
 
-    // Toggle stylesheet and style elements
     const styleNodes = document.querySelectorAll('link[rel="stylesheet"], style');
     styleNodes.forEach((node) => {
       if (node.id === "lantern-core-styles") return;
@@ -205,7 +215,7 @@
 
     const isFeature = issue.severity === "feature";
     const color = SEVERITY_COLORS[issue.severity] || (isFeature ? "#16a34a" : "#dc2626");
-    const badgeLabel = isFeature ? "FEATURE" : issue.severity.toUpperCase();
+    const badgeLabel = isFeature ? "FEATURE" : (issue.severity || "info").toUpperCase();
 
     const tooltip = document.createElement("div");
     tooltip.className = "lantern-interactive-tooltip";
@@ -216,15 +226,15 @@
         <button class="lantern-close-btn" title="Close">&times;</button>
       </div>
       <div class="lantern-tooltip-body">
-        <p class="lantern-msg">${escapeHtml(issue.message)}</p>
+        <p class="lantern-msg">${escapeHtml(issue.message || "")}</p>
         ${
           issue.element
             ? `<div class="lantern-code-preview">${escapeHtml(issue.element)}</div>`
             : ""
         }
         <div class="lantern-fix-box">
-          <div class="lantern-fix-title">${isFeature ? "✓ Accessibility Benefit:" : "💡 Suggested Correction:"}</div>
-          <div class="lantern-fix-text">${escapeHtml(issue.how_to_fix || "Follow WCAG authoring practices.")}</div>
+          <div class="lantern-fix-title">${isFeature ? "Benefit:" : "Suggested Fix:"}</div>
+          <div class="lantern-fix-text">${escapeHtml(issue.how_to_fix || "Follow WCAG standard practices.")}</div>
         </div>
         <div class="lantern-tooltip-actions">
           ${
@@ -258,21 +268,21 @@
       });
     }
 
-    document.body.appendChild(tooltip);
+    document.documentElement.appendChild(tooltip);
     activeTooltip = tooltip;
 
-    const rect = el.getBoundingClientRect();
+    const coords = getElementPageCoordinates(el);
     const tooltipHeight = 220;
     const tooltipWidth = 340;
 
-    let top = window.scrollY + rect.bottom + 8;
-    if (rect.bottom + tooltipHeight > window.innerHeight && rect.top > tooltipHeight) {
-      top = window.scrollY + rect.top - tooltipHeight - 8;
+    let top = coords.top + coords.height + 8;
+    if (coords.rawRect.bottom + tooltipHeight > window.innerHeight && coords.rawRect.top > tooltipHeight) {
+      top = coords.top - tooltipHeight - 8;
     }
 
-    let left = window.scrollX + rect.left;
-    if (rect.left + tooltipWidth > window.innerWidth) {
-      left = Math.max(10, window.scrollX + window.innerWidth - tooltipWidth - 20);
+    let left = coords.left;
+    if (coords.rawRect.left + tooltipWidth > window.innerWidth) {
+      left = Math.max(10, coords.left + coords.width - tooltipWidth);
     }
 
     tooltip.style.top = `${Math.max(10, top)}px`;
@@ -300,29 +310,44 @@
 
       const color = SEVERITY_COLORS[item.severity] || "#dc2626";
 
-      // Mark element attribute & classes
+      // 1. Mark element attribute & classes
       targetEl.setAttribute("data-lantern-flagged", item.severity);
       targetEl.classList.add("lantern-element-flagged", `lantern-border-${item.severity}`);
 
-      // Apply direct inline styles as guarantee against stylesheet overrides
+      // Apply direct inline styles
       targetEl.style.setProperty("outline", `3px solid ${color}`, "important");
       targetEl.style.setProperty("outline-offset", "2px", "important");
       targetEl.style.setProperty("box-shadow", `0 0 0 2px #fff, 0 0 10px ${color}80`, "important");
 
-      // Inject small visual indicator badge pin
+      const coords = getElementPageCoordinates(targetEl);
+
+      // 2. Inject floating border overlay frame (cannot be clipped by parent overflow:hidden!)
+      const overlay = document.createElement("div");
+      overlay.className = "lantern-injected-overlay";
+      overlay.setAttribute("data-lantern-overlay-for", item.element_id || "");
+      overlay.style.cssText = `
+        position: absolute !important;
+        top: ${Math.max(0, coords.top - 2)}px !important;
+        left: ${Math.max(0, coords.left - 2)}px !important;
+        width: ${Math.max(16, coords.width + 4)}px !important;
+        height: ${Math.max(16, coords.height + 4)}px !important;
+        border: 3px solid ${color} !important;
+        border-radius: 4px !important;
+        box-shadow: 0 0 0 2px #ffffff, 0 0 12px ${color}90 !important;
+        pointer-events: none !important;
+        z-index: 2147483638 !important;
+      `;
+      document.documentElement.appendChild(overlay);
+
+      // 3. Inject visual indicator badge pin
       const badge = document.createElement("button");
       badge.className = `lantern-injected-badge lantern-bg-${item.severity}`;
-      const prefix = item.severity === "feature" ? "✓" : item.severity.slice(0, 4).toUpperCase();
-      badge.textContent = `${prefix} · ${item.rule_id || "rule"}`;
+      const prefix = item.severity === "feature" ? "FEATURE" : item.severity.slice(0, 4).toUpperCase();
+      badge.textContent = `${prefix} · ${item.rule_id || "issue"}`;
       badge.setAttribute("data-lantern-badge-for", item.element_id || "");
 
-      const updateBadgePos = () => {
-        const rect = targetEl.getBoundingClientRect();
-        badge.style.top = `${Math.max(0, window.scrollY + rect.top - 22)}px`;
-        badge.style.left = `${Math.max(0, window.scrollX + rect.left)}px`;
-      };
-
-      updateBadgePos();
+      badge.style.top = `${Math.max(0, coords.top - 22)}px`;
+      badge.style.left = `${Math.max(0, coords.left)}px`;
 
       badge.addEventListener("click", (e) => {
         e.preventDefault();
@@ -330,7 +355,7 @@
         showInteractiveTooltip(targetEl, item);
       });
 
-      document.body.appendChild(badge);
+      document.documentElement.appendChild(badge);
     }
   };
 
@@ -349,16 +374,16 @@
       badge.setAttribute("data-lantern-order-id", item.element_id);
       badge.setAttribute("title", `Order #${item.order}: <${item.tag}> "${item.accessible_name}" (tabindex: ${item.tabindex})`);
 
-      const rect = el.getBoundingClientRect();
-      badge.style.top = `${Math.max(0, window.scrollY + rect.top - 10)}px`;
-      badge.style.left = `${Math.max(0, window.scrollX + rect.left - 10)}px`;
+      const coords = getElementPageCoordinates(el);
+      badge.style.top = `${Math.max(0, coords.top - 11)}px`;
+      badge.style.left = `${Math.max(0, coords.left - 11)}px`;
 
       badge.addEventListener("click", (e) => {
         e.stopPropagation();
         window.lanternFocusOrderItem(item.order);
       });
 
-      document.body.appendChild(badge);
+      document.documentElement.appendChild(badge);
     });
   };
 
@@ -374,13 +399,11 @@
     const targetEl = findElementDeep(item.element_id, item.selector);
     if (!targetEl) return false;
 
-    // Pulse target element
     targetEl.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
     targetEl.classList.remove("lantern-element-pulse");
     void targetEl.offsetWidth;
     targetEl.classList.add("lantern-element-pulse");
 
-    // Highlight the active order badge
     document.querySelectorAll(".lantern-order-badge").forEach((b) => b.classList.remove("active"));
     const activeBadge = document.querySelector(`.lantern-order-badge[data-lantern-order-id="${CSS.escape(item.element_id)}"]`);
     if (activeBadge) activeBadge.classList.add("active");
@@ -462,28 +485,43 @@
 
   // ── Dynamic Position Updates on Scroll and Window Resize ────────
   function updateAllPositions() {
-    // 1. Update indicator badges
+    // 1. Update badges
     document.querySelectorAll(".lantern-injected-badge").forEach((badge) => {
       const id = badge.getAttribute("data-lantern-badge-for");
       if (id) {
         const el = findElementDeep(id, null);
         if (el) {
-          const rect = el.getBoundingClientRect();
-          badge.style.top = `${Math.max(0, window.scrollY + rect.top - 22)}px`;
-          badge.style.left = `${Math.max(0, window.scrollX + rect.left)}px`;
+          const coords = getElementPageCoordinates(el);
+          badge.style.top = `${Math.max(0, coords.top - 22)}px`;
+          badge.style.left = `${Math.max(0, coords.left)}px`;
         }
       }
     });
 
-    // 2. Update order badges
+    // 2. Update border overlay frames
+    document.querySelectorAll(".lantern-injected-overlay").forEach((overlay) => {
+      const id = overlay.getAttribute("data-lantern-overlay-for");
+      if (id) {
+        const el = findElementDeep(id, null);
+        if (el) {
+          const coords = getElementPageCoordinates(el);
+          overlay.style.top = `${Math.max(0, coords.top - 2)}px`;
+          overlay.style.left = `${Math.max(0, coords.left - 2)}px`;
+          overlay.style.width = `${Math.max(16, coords.width + 4)}px`;
+          overlay.style.height = `${Math.max(16, coords.height + 4)}px`;
+        }
+      }
+    });
+
+    // 3. Update order badges
     document.querySelectorAll(".lantern-order-badge").forEach((badge) => {
       const id = badge.getAttribute("data-lantern-order-id");
       if (id) {
         const el = findElementDeep(id, null);
         if (el) {
-          const rect = el.getBoundingClientRect();
-          badge.style.top = `${Math.max(0, window.scrollY + rect.top - 10)}px`;
-          badge.style.left = `${Math.max(0, window.scrollX + rect.left - 10)}px`;
+          const coords = getElementPageCoordinates(el);
+          badge.style.top = `${Math.max(0, coords.top - 11)}px`;
+          badge.style.left = `${Math.max(0, coords.left - 11)}px`;
         }
       }
     });
