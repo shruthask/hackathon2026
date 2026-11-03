@@ -1,0 +1,755 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WanderWay | Explore the World</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #e8e8e8;
+            color: #cccccc;
+            line-height: 1.6;
+        }
+
+        a {
+            color: #cccccc;
+            text-decoration: none;
+        }
+
+        header {
+            background: #e5e5e5;
+            padding: 18px 6%;
+            border-bottom: 1px solid #dedede;
+        }
+
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #c9c9c9;
+            letter-spacing: 1px;
+        }
+
+        nav {
+            display: flex;
+            gap: 22px;
+            flex-wrap: wrap;
+        }
+
+        nav a {
+            color: #cecece;
+            font-size: 14px;
+            padding: 8px;
+        }
+
+        nav a:hover {
+            color: #bdbdbd;
+            background: #e1e1e1;
+        }
+
+        .hero {
+            min-height: 490px;
+            padding: 105px 8%;
+            background:
+                linear-gradient(
+                    rgba(230,230,230,0.87),
+                    rgba(230,230,230,0.91)
+                ),
+                url("https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1600")
+                center/cover no-repeat;
+        }
+
+        .hero h1 {
+            font-size: 55px;
+            line-height: 1.15;
+            max-width: 720px;
+            color: #c6c6c6;
+            margin-bottom: 20px;
+        }
+
+        .hero p {
+            max-width: 650px;
+            font-size: 19px;
+            color: #cecece;
+            filter: blur(0.4px);
+        }
+
+        .button {
+            display: inline-block;
+            margin-top: 25px;
+            padding: 13px 25px;
+            background: #dedede;
+            color: #c3c3c3;
+            border: 1px solid #d8d8d8;
+            border-radius: 3px;
+        }
+
+        section {
+            padding: 70px 8%;
+            background: #e8e8e8;
+            border-bottom: 1px solid #e2e2e2;
+        }
+
+        section:nth-of-type(even) {
+            background: #e6e6e6;
+        }
+
+        h2 {
+            font-size: 34px;
+            color: #c6c6c6;
+            margin-bottom: 15px;
+        }
+
+        h3 {
+            font-size: 22px;
+            color: #cccccc;
+            margin-bottom: 10px;
+        }
+
+        p {
+            color: #cccccc;
+        }
+
+        .intro {
+            max-width: 750px;
+            color: #cecece;
+            margin-bottom: 35px;
+        }
+
+        .search-box {
+            background: #e5e5e5;
+            border: 1px solid #dedede;
+            padding: 28px;
+            margin-top: -40px;
+            position: relative;
+        }
+
+        .search-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+
+        .search-grid input,
+        .search-grid select {
+            width: 100%;
+            padding: 14px;
+            background: #e9e9e9;
+            border: 1px solid #dedede;
+            color: #cccccc;
+            font-size: 14px;
+        }
+
+        input::placeholder {
+            color: #d0d0d0;
+        }
+
+        .search-grid button {
+            padding: 14px;
+            background: #dedede;
+            color: #c6c6c6;
+            border: 1px solid #d8d8d8;
+            cursor: pointer;
+        }
+
+        .destination-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .destination-card {
+            background: #e5e5e5;
+            border: 1px solid #dfdfdf;
+            overflow: hidden;
+            box-shadow: 0 3px 12px rgba(210,210,210,0.2);
+        }
+
+        .destination-card img {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            opacity: 0.55;
+            filter: grayscale(40%) contrast(70%);
+        }
+
+        .card-content {
+            padding: 22px;
+        }
+
+        .card-content p {
+            color: #cecece;
+            margin-bottom: 12px;
+        }
+
+        .price {
+            color: #c9c9c9;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .card-content a {
+            display: inline-block;
+            margin-top: 12px;
+            color: #c9c9c9;
+            border-bottom: 1px solid #dedede;
+        }
+
+        .offers {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+        }
+
+        .offer {
+            padding: 30px;
+            background: #e5e5e5;
+            border: 1px solid #dedede;
+        }
+
+        .offer span {
+            color: #d0d0d0;
+            font-size: 13px;
+        }
+
+        .offer h3 {
+            margin-top: 10px;
+        }
+
+        .offer p {
+            margin-bottom: 12px;
+        }
+
+        .experience {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            align-items: center;
+        }
+
+        .experience img {
+            width: 100%;
+            height: 350px;
+            object-fit: cover;
+            opacity: 0.55;
+            filter: grayscale(40%) contrast(70%);
+        }
+
+        .experience ul {
+            padding-left: 25px;
+            margin-top: 20px;
+        }
+
+        .experience li {
+            color: #cccccc;
+            margin-bottom: 12px;
+        }
+
+        .booking-form {
+            max-width: 750px;
+            background: #e5e5e5;
+            border: 1px solid #dedede;
+            padding: 30px;
+            margin-top: 30px;
+        }
+
+        .form-row {
+            margin-bottom: 18px;
+        }
+
+        .booking-form label {
+            display: block;
+            color: #cecece;
+            margin-bottom: 6px;
+        }
+
+        .booking-form input,
+        .booking-form select,
+        .booking-form textarea {
+            width: 100%;
+            padding: 13px;
+            background: #e9e9e9;
+            border: 1px solid #dedede;
+            color: #cccccc;
+            font-size: 15px;
+        }
+
+        .booking-form button {
+            padding: 13px 25px;
+            background: #dedede;
+            color: #c6c6c6;
+            border: 1px solid #d8d8d8;
+            cursor: pointer;
+        }
+
+        .testimonials {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .testimonial {
+            background: #e5e5e5;
+            border: 1px solid #dedede;
+            padding: 25px;
+        }
+
+        .testimonial p {
+            color: #cecece;
+        }
+
+        footer {
+            padding: 40px 8%;
+            background: #e5e5e5;
+            border-top: 1px solid #dedede;
+            color: #cccccc;
+        }
+
+        footer p {
+            color: #cecece;
+        }
+
+        footer a {
+            color: #cecece;
+            margin-right: 15px;
+        }
+
+        .footer-bottom {
+            border-top: 1px solid #dedede;
+            padding-top: 20px;
+            margin-top: 25px;
+        }
+
+        @media(max-width: 850px) {
+            .destination-grid,
+            .testimonials {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .search-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .experience {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media(max-width: 550px) {
+            nav {
+                gap: 5px;
+                margin-top: 15px;
+            }
+
+            .hero {
+                padding: 70px 6%;
+            }
+
+            .hero h1 {
+                font-size: 35px;
+            }
+
+            .destination-grid,
+            .offers,
+            .testimonials,
+            .search-grid {
+                grid-template-columns: 1fr;
+            }
+
+            section {
+                padding: 45px 6%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="navbar">
+            <div class="logo">WANDERWAY</div>
+
+            <nav>
+                <a href="#home">Home</a>
+                <a href="#destinations">Destinations</a>
+                <a href="#offers">Offers</a>
+                <a href="#experiences">Experiences</a>
+                <a href="#reviews">Reviews</a>
+                <a href="#booking">Book Now</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+
+        <div class="hero" id="home">
+            <h1>Discover the World, One Journey at a Time</h1>
+
+            <p>
+                Explore breathtaking destinations, discover new cultures,
+                and create unforgettable memories with WanderWay.
+                Your next adventure is waiting for you.
+            </p>
+
+            <a href="#destinations" class="button">Explore Destinations</a>
+            <a href="#booking" class="button">Plan Your Trip</a>
+        </div>
+
+        <section>
+            <div class="search-box">
+                <h2>Find Your Next Trip</h2>
+
+                <div class="search-grid">
+                    <input type="text" placeholder="Where do you want to go?">
+                    <input type="date" placeholder="Departure date">
+                    <select>
+                        <option>Number of travelers</option>
+                        <option>1 Traveler</option>
+                        <option>2 Travelers</option>
+                        <option>3 Travelers</option>
+                        <option>4+ Travelers</option>
+                    </select>
+                    <button type="button">Search Trips</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="destinations">
+            <h2>Popular Destinations</h2>
+
+            <p class="intro">
+                Discover some of the world's most beautiful places.
+                From tropical beaches to historic cities, find
+                the perfect destination for your next holiday.
+            </p>
+
+            <div class="destination-grid">
+
+                <div class="destination-card">
+                    <img
+                        src="https://images.unsplash.com/photo-1516483638261-f4dbaf036963?w=700"
+                        alt=""
+                    >
+
+                    <div class="card-content">
+                        <h3>Amalfi Coast, Italy</h3>
+                        <p>
+                            Explore colorful coastal villages,
+                            beautiful beaches, and Italian cuisine.
+                        </p>
+                        <div class="price">From $899</div>
+                        <a href="#booking">Explore Destination</a>
+                    </div>
+                </div>
+
+                <div class="destination-card">
+                    <img
+                        src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=700"
+                    >
+
+                    <div class="card-content">
+                        <h3>Swiss Alps, Switzerland</h3>
+                        <p>
+                            Experience mountain landscapes,
+                            scenic railways, and peaceful villages.
+                        </p>
+                        <div class="price">From $1,199</div>
+                        <a href="#booking">Explore Destination</a>
+                    </div>
+                </div>
+
+                <div class="destination-card">
+                    <img
+                        src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=700"
+                        alt=""
+                    >
+
+                    <div class="card-content">
+                        <h3>Bali, Indonesia</h3>
+                        <p>
+                            Relax on tropical beaches and discover
+                            temples, waterfalls, and local culture.
+                        </p>
+                        <div class="price">From $699</div>
+                        <a href="#booking">Explore Destination</a>
+                    </div>
+                </div>
+
+                <div class="destination-card">
+                    <img
+                        src="https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=700"
+                        alt=""
+                    >
+
+                    <div class="card-content">
+                        <h3>Kyoto, Japan</h3>
+                        <p>
+                            Discover traditional architecture,
+                            gardens, and unforgettable food.
+                        </p>
+                        <div class="price">From $999</div>
+                        <a href="#booking">Explore Destination</a>
+                    </div>
+                </div>
+
+                <div class="destination-card">
+                    <img
+                        src="https://images.unsplash.com/photo-1533105079780-92b9be482077?w=700"
+                        alt=""
+                    >
+
+                    <div class="card-content">
+                        <h3>Santorini, Greece</h3>
+                        <p>
+                            Enjoy island views, white buildings,
+                            and beautiful Mediterranean sunsets.
+                        </p>
+                        <div class="price">From $1,099</div>
+                        <a href="#booking">Explore Destination</a>
+                    </div>
+                </div>
+
+                <div class="destination-card">
+                    <img
+                        src="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=700"
+                        alt=""
+                    >
+
+                    <div class="card-content">
+                        <h3>Dubai, UAE</h3>
+                        <p>
+                            Experience modern architecture,
+                            desert adventures, and luxury shopping.
+                        </p>
+                        <div class="price">From $799</div>
+                        <a href="#booking">Explore Destination</a>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <section id="offers">
+            <h2>Special Travel Offers</h2>
+
+            <p class="intro">
+                Make your next holiday more affordable with
+                our specially selected travel packages.
+            </p>
+
+            <div class="offers">
+
+                <div class="offer">
+                    <span>LIMITED TIME OFFER</span>
+                    <h3>Summer Beach Escape</h3>
+                    <p>
+                        Enjoy a relaxing seven-day beach holiday
+                        with accommodation and selected activities.
+                    </p>
+                    <p>Starting from $699 per person</p>
+                    <a href="#booking">View Offer</a>
+                </div>
+
+                <div class="offer">
+                    <span>POPULAR PACKAGE</span>
+                    <h3>European Adventure</h3>
+                    <p>
+                        Explore famous European cities with
+                        guided tours and comfortable accommodation.
+                    </p>
+                    <p>Starting from $1,499 per person</p>
+                    <a href="#booking">View Offer</a>
+                </div>
+
+            </div>
+        </section>
+
+        <section id="experiences">
+            <div class="experience">
+
+                <div>
+                    <h2>Travel Beyond the Ordinary</h2>
+
+                    <p>
+                        Every journey is an opportunity to discover
+                        something new. WanderWay helps you experience
+                        destinations through local culture,
+                        exciting activities, and memorable adventures.
+                    </p>
+
+                    <ul>
+                        <li>Guided sightseeing experiences</li>
+                        <li>Local food and cultural tours</li>
+                        <li>Adventure and outdoor activities</li>
+                        <li>Relaxing beach and wellness holidays</li>
+                        <li>Personalized travel recommendations</li>
+                    </ul>
+
+                    <a href="#booking" class="button">Plan an Experience</a>
+                </div>
+
+                <div>
+                    <img
+                        src="https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=900"
+                        alt="Mountain lake surrounded by mountains"
+                    >
+                </div>
+
+            </div>
+        </section>
+
+        <section id="reviews">
+            <h2>What Travelers Say</h2>
+
+            <p class="intro">
+                Read about the experiences of travelers
+                who have explored the world with WanderWay.
+            </p>
+
+            <div class="testimonials">
+
+                <div class="testimonial">
+                    <h3>Sarah M.</h3>
+                    <p>
+                        "The trip was wonderful. Everything was
+                        organized and the destinations were beautiful."
+                    </p>
+                </div>
+
+                <div class="testimonial">
+                    <h3>James R.</h3>
+                    <p>
+                        "An unforgettable experience. The team
+                        made planning my holiday so much easier."
+                    </p>
+                </div>
+
+                <div class="testimonial">
+                    <h3>Emily K.</h3>
+                    <p>
+                        "I discovered amazing places and enjoyed
+                        every moment of the journey."
+                    </p>
+                </div>
+
+            </div>
+        </section>
+
+        <section id="booking">
+            <h2>Plan Your Next Adventure</h2>
+
+            <p class="intro">
+                Tell us about your travel plans and our team
+                will help you find the right trip.
+            </p>
+
+            <form class="booking-form">
+
+                <div class="form-row">
+                    <input type="text" placeholder="Your full name">
+                </div>
+
+                <div class="form-row">
+                    <input type="email" placeholder="Your email address">
+                </div>
+
+                <div class="form-row">
+                    <input type="text" placeholder="Destination">
+                </div>
+
+                <div class="form-row">
+                    <input type="date">
+                </div>
+
+                <div class="form-row">
+                    <select>
+                        <option>Choose travel type</option>
+                        <option>Adventure</option>
+                        <option>Beach Holiday</option>
+                        <option>Cultural Tour</option>
+                        <option>Family Vacation</option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <textarea rows="4" placeholder="Tell us about your travel preferences"></textarea>
+                </div>
+
+                <button type="submit">Send Travel Request</button>
+
+            </form>
+        </section>
+
+        <section id="contact">
+            <h2>Get in Touch</h2>
+
+            <p class="intro">
+                Have questions about a destination or booking?
+                Our travel team is ready to help.
+            </p>
+
+            <div class="offers">
+
+                <div class="offer">
+                    <h3>Email</h3>
+                    <p>hello@wanderway.com</p>
+                </div>
+
+                <div class="offer">
+                    <h3>Phone</h3>
+                    <p>+1 555 234 8900</p>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <footer>
+        <h3>WanderWay Travel</h3>
+
+        <p>
+            Discover new places. Experience new cultures.
+            Make memories that last forever.
+        </p>
+
+        <div style="margin-top:20px">
+            <a href="#home">Home</a>
+            <a href="#destinations">Destinations</a>
+            <a href="#offers">Offers</a>
+            <a href="#booking">Bookings</a>
+        </div>
+
+        <div class="footer-bottom">
+            <p>© 2026 WanderWay Travel. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.querySelector(".booking-form").addEventListener(
+            "submit",
+            function(event) {
+                event.preventDefault();
+                alert("Your travel request has been submitted!");
+            }
+        );
+    </script>
+
+</body>
+</html>
