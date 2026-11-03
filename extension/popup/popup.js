@@ -2,7 +2,8 @@
  * Lantern – Popup Controller
  *
  * Manages Start Scan Screen with Persistent Privacy Consent,
- * Error Banner, In-Page Inspector Navigation, and CSV Report Export.
+ * Direct Script Execution (no port timeout drops), In-Page
+ * Inspector Navigation, and CSV Report Export.
  */
 
 let currentReport = null;
@@ -13,7 +14,7 @@ let activeSeverities = new Set(["critical", "serious", "moderate", "minor"]);
 let searchKeyword = "";
 let areHighlightsVisible = true;
 
-// DOM Elements
+// ── DOM Elements ────────────────────────────────────────────────────
 const initialStateEl = document.getElementById("initial-state");
 const loadingStateEl = document.getElementById("loading-state");
 const loadingStepMsgEl = document.getElementById("loading-step-msg");
@@ -48,15 +49,26 @@ const issueListEl = document.getElementById("issue-list");
 const emptyFilterMsgEl = document.getElementById("empty-filter-msg");
 
 // ── Resilient Active Tab Finder ─────────────────────────────────────
-async function getActiveTab() {
+async function getActiveWebTab() {
+  // Query 1: Current browser window active tab
   try {
-    const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-    if (tab && tab.id) return tab;
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    const tab = tabs.find((t) => t && t.id && !t.url?.startsWith("chrome-extension://"));
+    if (tab) return tab;
   } catch (e) {}
 
+  // Query 2: Last focused window active tab
   try {
-    const [currentTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (currentTab && currentTab.id) return currentTab;
+    const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+    const tab = tabs.find((t) => t && t.id && !t.url?.startsWith("chrome-extension://"));
+    if (tab) return tab;
+  } catch (e) {}
+
+  // Query 3: Any active web tab
+  try {
+    const tabs = await chrome.tabs.query({ active: true });
+    const tab = tabs.find((t) => t && t.id && !t.url?.startsWith("chrome-extension://"));
+    if (tab) return tab;
   } catch (e) {}
 
   return null;
@@ -79,7 +91,7 @@ function hideError() {
 
 // ── Initialization ──────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", async () => {
-  const tab = await getActiveTab();
+  const tab = await getActiveWebTab();
   if (tab) {
     activeTabId = tab.id;
     try {
@@ -89,16 +101,20 @@ document.addEventListener("DOMContentLoaded", async () => {
       currentHostname = "local page";
     }
 
-    // Warn if on internal chrome:// or extension settings page
     const url = tab.url || "";
     if (
       url.startsWith("chrome://") ||
-      url.startsWith("chrome-extension://") ||
       url.startsWith("edge://") ||
       url.startsWith("about:")
     ) {
-      showError("Cannot audit internal browser pages. Please open a website (like YouTube, Wikipedia, or a local page) and reopen Lantern.");
+      showError("Cannot audit internal browser pages. Please open a website (like YouTube, Wikipedia, or your own site) and reopen Lantern.");
       startScanBtn.disabled = true;
+    } else if (url.startsWith("file://") && chrome.extension && chrome.extension.isAllowedFileSchemeAccess) {
+      chrome.extension.isAllowedFileSchemeAccess((isAllowed) => {
+        if (!isAllowed) {
+          showError("Local file detected: To audit local files, please go to chrome://extensions -> Lantern 'Details', and enable 'Allow access to file URLs'.");
+        }
+      });
     }
   }
 
@@ -186,11 +202,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     if (activeTabId) {
-      chrome.runtime.sendMessage({
-        action: "toggle-highlights",
-        tabId: activeTabId,
-        visible: areHighlightsVisible,
-      });
+      toggleHighlightsDirect(activeTabId, areHighlightsVisible);
     }
   });
 
@@ -198,14 +210,102 @@ document.addEventListener("DOMContentLoaded", async () => {
   exportCsvBtn.addEventListener("click", exportResultsToCSV);
 });
 
+// ── Direct Execution Core (Eliminates Port Disconnection Errors) ─────
+async function runAuditDirect(tabId) {
+  // 1. Inject highlight styles
+  await chrome.scripting.insertCSS({
+    target: { tabId },
+    files: ["styles/highlight.css"],
+  }).catch(() => {});
+
+  // 2. Inject auditor and highlighter scripts
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: ["content/auditor.js", "content/highlighter.js"],
+  });
+
+  // 3. Execute audit directly in the page context
+  const results = await chrome.scripting.executeScript({
+    target: { tabId },
+    func: () => {
+      if (typeof window.lanternRunAudit === "function") {
+        return window.lanternRunAudit();
+      }
+      return null;
+    },
+  });
+
+  const report = results?.[0]?.result;
+  if (!report) {
+    throw new Error("Audit engine did not return results. The page may have blocked script execution or is still loading.");
+  }
+
+  // 4. Apply in-page highlights
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    func: (issues) => {
+      if (typeof window.lanternApplyHighlights === "function") {
+        window.lanternApplyHighlights(issues);
+      }
+    },
+    args: [report.issues || []],
+  }).catch(() => {});
+
+  // 5. Best-effort async sync to FastAPI backend (if running)
+  fetch("http://localhost:8000/api/scan/audit-sync", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(report),
+  }).catch(() => {});
+
+  return report;
+}
+
+async function focusIssueDirect(tabId, elementId) {
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      func: (elId) => {
+        if (typeof window.lanternFocusIssue === "function") {
+          return window.lanternFocusIssue(elId);
+        }
+        return false;
+      },
+      args: [elementId],
+    });
+  } catch (e) {
+    chrome.runtime.sendMessage({ action: "focus-issue", tabId, elementId }, () => {
+      if (chrome.runtime.lastError) {}
+    });
+  }
+}
+
+async function toggleHighlightsDirect(tabId, visible) {
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      func: (vis) => {
+        if (typeof window.lanternToggleHighlights === "function") {
+          window.lanternToggleHighlights(vis);
+        }
+      },
+      args: [visible],
+    });
+  } catch (e) {
+    chrome.runtime.sendMessage({ action: "toggle-highlights", tabId, visible }, () => {
+      if (chrome.runtime.lastError) {}
+    });
+  }
+}
+
 // ── Trigger Scan with Step Feedback ─────────────────────────────────
 async function triggerScan() {
   hideError();
 
   // Ensure active tab is resolved
-  const tab = await getActiveTab();
+  const tab = await getActiveWebTab();
   if (!tab || !tab.id) {
-    showError("No active web page detected. Please open a webpage and try again.");
+    showError("No active web page detected. Please open any webpage (http://, https://, or file://) and try again.");
     return;
   }
   activeTabId = tab.id;
@@ -213,11 +313,10 @@ async function triggerScan() {
   const url = tab.url || "";
   if (
     url.startsWith("chrome://") ||
-    url.startsWith("chrome-extension://") ||
     url.startsWith("edge://") ||
     url.startsWith("about:")
   ) {
-    showError("Cannot audit internal browser pages. Please open any web page (http://, https://, or file://).");
+    showError("Cannot audit internal browser pages. Please open any web page (e.g. YouTube, Wikipedia, or your own site).");
     return;
   }
 
@@ -240,30 +339,36 @@ async function triggerScan() {
     }
   }, 450);
 
-  chrome.runtime.sendMessage(
-    { action: "scan-page", tabId: activeTabId },
-    (response) => {
-      clearInterval(stepInterval);
+  try {
+    const report = await runAuditDirect(activeTabId);
+    clearInterval(stepInterval);
+    loadingStateEl.classList.add("hidden");
+    currentReport = report;
+    renderDashboard(currentReport);
 
-      if (chrome.runtime.lastError) {
-        showError(`Extension Communication Error: ${chrome.runtime.lastError.message}`);
-        return;
+    // Reveal header navigation buttons
+    rescanBtn.classList.remove("hidden");
+    resetViewBtn.classList.remove("hidden");
+  } catch (err) {
+    clearInterval(stepInterval);
+    console.error("Direct audit error:", err);
+    // Fall back to service worker if direct scripting encountered an edge case
+    chrome.runtime.sendMessage(
+      { action: "scan-page", tabId: activeTabId },
+      (response) => {
+        if (chrome.runtime.lastError || !response?.success) {
+          const msg = response?.error || err.message || "Could not complete scan on this webpage.";
+          showError(msg);
+          return;
+        }
+        loadingStateEl.classList.add("hidden");
+        currentReport = response.data;
+        renderDashboard(currentReport);
+        rescanBtn.classList.remove("hidden");
+        resetViewBtn.classList.remove("hidden");
       }
-
-      if (!response || !response.success) {
-        showError(response?.error || "Could not complete scan on this webpage.");
-        return;
-      }
-
-      loadingStateEl.classList.add("hidden");
-      currentReport = response.data;
-      renderDashboard(currentReport);
-
-      // Reveal header navigation buttons
-      rescanBtn.classList.remove("hidden");
-      resetViewBtn.classList.remove("hidden");
-    }
-  );
+    );
+  }
 }
 
 // ── Render Dashboard ────────────────────────────────────────────────
@@ -342,7 +447,7 @@ function renderFilteredIssues() {
         ${
           issue.element_id
             ? `<button class="inspect-btn" data-element-id="${escapeHtml(issue.element_id)}" title="Scroll & Inspect Element">
-                <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
+                <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
                 <span>Inspect</span>
                </button>`
             : ""
@@ -365,11 +470,7 @@ function renderFilteredIssues() {
       inspectBtn.addEventListener("click", () => {
         const elId = inspectBtn.getAttribute("data-element-id");
         if (elId && activeTabId) {
-          chrome.runtime.sendMessage({
-            action: "focus-issue",
-            tabId: activeTabId,
-            elementId: elId,
-          });
+          focusIssueDirect(activeTabId, elId);
         }
       });
     }

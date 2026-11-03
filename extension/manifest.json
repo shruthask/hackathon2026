@@ -1,9 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Lantern – Accessibility Checker",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Comprehensive live accessibility auditor for any website. Scans images, headings, forms, links, and computed contrast with in-page highlighting.",
   "permissions": [
+    "tabs",
     "activeTab",
     "scripting",
     "storage"
